@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TravianBot Remote</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f6f2eb;
+        color: #211c16;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { margin: 0 auto; max-width: 760px; padding: 18px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+      h1 { margin: 0; font-size: 22px; letter-spacing: 0; }
+      h2 { margin: 0 0 10px; font-size: 14px; color: #6b6258; text-transform: uppercase; }
+      input, select, button {
+        width: 100%;
+        min-height: 42px;
+        border-radius: 8px;
+        border: 1px solid #d6cdc1;
+        font: inherit;
+      }
+      input, select { padding: 0 12px; background: #fffaf4; color: inherit; }
+      button {
+        cursor: pointer;
+        border-color: #b86517;
+        background: #c97418;
+        color: white;
+        font-weight: 700;
+      }
+      button.secondary { background: #fffaf4; color: #3a3026; border-color: #d6cdc1; }
+      button.danger { background: #b44435; border-color: #9f392d; }
+      button:disabled { cursor: not-allowed; opacity: .55; }
+      .card {
+        margin-bottom: 12px;
+        border: 1px solid #ded5ca;
+        border-radius: 8px;
+        background: #fffaf4;
+        padding: 14px;
+        box-shadow: 0 1px 2px rgba(43, 32, 18, .06);
+      }
+      .grid { display: grid; gap: 10px; }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+      .muted { color: #746b61; font-size: 13px; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+      .pill { border-radius: 999px; background: #eee5d9; padding: 4px 8px; font-size: 12px; font-weight: 700; }
+      .hidden { display: none; }
+      .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      @media (min-width: 620px) {
+        .login-grid { grid-template-columns: 1fr 1fr auto; align-items: end; }
+        .login-grid button { width: 120px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <h1>TravianBot Remote</h1>
+          <div class="muted" id="sessionLabel">Giris yapilmadi</div>
+        </div>
+        <button class="secondary hidden" id="logoutButton" style="width:auto;padding:0 12px">Cikis</button>
+      </header>
+
+      <section class="card" id="loginCard">
+        <h2>Giris</h2>
+        <div class="grid login-grid">
+          <input id="emailInput" autocomplete="email" placeholder="E-posta" />
+          <input id="passwordInput" autocomplete="current-password" type="password" placeholder="Sifre" />
+          <button id="loginButton">Giris</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="controlCard">
+        <div class="toolbar">
+          <button id="refreshButton" class="secondary">Yenile</button>
+          <button id="stopAllButton" class="danger">Tumunu durdur</button>
+        </div>
+      </section>
+
+      <section id="deviceList" class="grid"></section>
+      <p class="muted mono" id="message"></p>
+    </main>
+
+    <script>
+      // Supabase (2026-11-07'ye kadar Firebase). Publishable key gizli DEGILDIR;
+      // yetki RLS + SQL RPC icindeki auth.uid() kontrolu ile saglanir.
+      // shared/backendConfig.ts ile ayni degerler olmalidir.
+      const SUPABASE_URL = "https://smsvzsbxsorogipyoivs.supabase.co";
+      const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_mSuUDrJ3nCsI2M2MbkxD5w_qlin_Jv9";
+      const AUTH_BASE = `${SUPABASE_URL}/auth/v1`;
+      const RPC_BASE = `${SUPABASE_URL}/rest/v1/rpc`;
+      const params = new URLSearchParams(location.search);
+
+      const state = {
+        accessToken: localStorage.getItem("travianbotRemote.accessToken") || "",
+        refreshToken: localStorage.getItem("travianbotRemote.refreshToken") || "",
+        expiresAt: Number(localStorage.getItem("travianbotRemote.expiresAt") || 0),
+        email: localStorage.getItem("travianbotRemote.email") || "",
+        phoneDeviceId: readPhoneDeviceId(),
+        pairToken: params.get("pairToken") || "",
+        devices: [],
+      };
+      // Eski (Firebase) oturum anahtarlarini temizle.
+      localStorage.removeItem("travianbotRemote.idToken");
+      localStorage.removeItem("travianbotRemote.apiBase");
+
+      const $ = (id) => document.getElementById(id);
+
+      const TASK_LABELS = {
+        travcoScan: "Inaktif Koy Tarama",
+        oasisFinder: "Vaha Bulucu",
+        sequentialAttack: "Sirali Saldiri",
+        troopTraining: "Asker Egitimi",
+        festival: "Festival",
+        resourceProduction: "Hammadde Uretimi",
+        buildVillage: "Koy Insa",
+        upgradeBuilding: "Hammadde Yukseltme",
+        armorUpgrade: "Zirh Yukseltme",
+        sendRaid: "Yagma Listesi",
+        buildBuilding: "Bina Insa ve Seviye",
+        heroAdventure: "Kahraman Macera",
+        aiCompleteTravianTasks: "Yapay Zeka ile Odevler",
+        travcoToolsConnect: "TravcoTools Baglan",
+        gettertoolsConnect: "Gettertools Baglan",
+      };
+      const taskLabel = (type) => TASK_LABELS[type] || type;
+
+      // Telefon panelinden eklenebilen gorevler: config semasi bos ({}) ile
+      // varsayilanlara dusen ve masaustu dialog'unu bozmayan tekrarli gorevler.
+      // Karmasik config gerektirenler (Sirali Saldiri, Asker Egitimi, Bina Insa,
+      // TravcoTools/Gettertools) masaustu uygulamasindan olusturulmalidir.
+      const ADDABLE_TASK_TYPES = [
+        "upgradeBuilding",
+        "sendRaid",
+        "festival",
+        "travcoScan",
+        "heroAdventure",
+        "aiCompleteTravianTasks",
+      ];
+
+      function setMessage(text) {
+        $("message").textContent = text || "";
+      }
+
+      function readPhoneDeviceId() {
+        const existing = localStorage.getItem("travianbotRemote.phoneDeviceId");
+        if (existing) return existing;
+        const bytes = new Uint8Array(16);
+        crypto.getRandomValues(bytes);
+        const id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+        localStorage.setItem("travianbotRemote.phoneDeviceId", id);
+        return id;
+      }
+
+      function setSessionUi() {
+        const signedIn = !!state.refreshToken;
+        $("loginCard").classList.toggle("hidden", signedIn);
+        $("controlCard").classList.toggle("hidden", !signedIn);
+        $("logoutButton").classList.toggle("hidden", !signedIn);
+        $("sessionLabel").textContent = signedIn ? state.email : "Giris yapilmadi";
+      }
+
+      const AUTH_ERROR_MESSAGES = {
+        invalid_credentials: "E-posta veya sifre hatali.",
+        email_not_confirmed: "E-posta adresiniz dogrulanmamis. Gelen kutunuzdaki baglantiya tiklayin.",
+        user_banned: "Bu hesap devre disi birakilmis.",
+        over_request_rate_limit: "Cok fazla deneme yapildi. Lutfen biraz sonra tekrar deneyin.",
+        validation_failed: "E-posta adresi gecersiz.",
+      };
+
+      function authErrorMessage(data) {
+        const code = String(data?.error_code || data?.error || "");
+        if (code === "invalid_grant") return AUTH_ERROR_MESSAGES.invalid_credentials;
+        return AUTH_ERROR_MESSAGES[code] || `Giris basarisiz (${data?.msg || data?.error_description || code || "?"}).`;
+      }
+
+      async function authFetch(path, body) {
+        let res, data;
+        try {
+          res = await fetch(`${AUTH_BASE}/${path}`, {
+            method: "POST",
+            headers: { "content-type": "application/json", apikey: SUPABASE_PUBLISHABLE_KEY },
+            body: JSON.stringify(body),
+          });
+          data = await res.json().catch(() => ({}));
+        } catch (e) {
+          // file:// origininden veya internet yokken sunucuya ulasilamaz.
+          throw new Error(
+            "Sunucuya ulasilamadi. Sayfayi dosya olarak (file://) degil QR baglantisindaki " +
+              "https adresinden acin ve internet baglantinizi kontrol edin.",
+          );
+        }
+        return { res, data };
+      }
+
+      function storeSession(data, fallbackEmail) {
+        state.accessToken = data.access_token;
+        state.refreshToken = data.refresh_token || state.refreshToken;
+        state.expiresAt = Date.now() + Number(data.expires_in || 3600) * 1000;
+        state.email = data.user?.email || fallbackEmail || state.email;
+        localStorage.setItem("travianbotRemote.accessToken", state.accessToken);
+        localStorage.setItem("travianbotRemote.refreshToken", state.refreshToken);
+        localStorage.setItem("travianbotRemote.expiresAt", String(state.expiresAt));
+        localStorage.setItem("travianbotRemote.email", state.email);
+      }
+
+      async function signIn() {
+        const email = $("emailInput").value.trim();
+        const password = $("passwordInput").value;
+        if (!email || !password) {
+          setMessage("E-posta ve sifre girin.");
+          return;
+        }
+        setMessage("Giris yapiliyor...");
+        const { res, data } = await authFetch("token?grant_type=password", { email, password });
+        if (!res.ok) throw new Error(authErrorMessage(data));
+        storeSession(data, email);
+        setSessionUi();
+        if (state.pairToken) await pairPhone();
+        await refreshDevices();
+      }
+
+      // Supabase refresh token'lari tek kullanimliktir; eszamanli yenilemeleri tekillestir.
+      let refreshPromise = null;
+      async function getAccessToken() {
+        if (state.accessToken && state.expiresAt - Date.now() > 60_000) return state.accessToken;
+        if (!state.refreshToken) throw new Error("Oturum yok. Tekrar giris yapin.");
+        refreshPromise =
+          refreshPromise ||
+          authFetch("token?grant_type=refresh_token", { refresh_token: state.refreshToken })
+            .then(({ res, data }) => {
+              if (!res.ok) {
+                signOut();
+                throw new Error("Oturum suresi doldu. Tekrar giris yapin.");
+              }
+              storeSession(data);
+              return state.accessToken;
+            })
+            .finally(() => {
+              refreshPromise = null;
+            });
+        return refreshPromise;
+      }
+
+      function signOut() {
+        state.accessToken = "";
+        state.refreshToken = "";
+        state.expiresAt = 0;
+        state.email = "";
+        state.devices = [];
+        for (const key of ["accessToken", "refreshToken", "expiresAt", "email"]) {
+          localStorage.removeItem(`travianbotRemote.${key}`);
+        }
+        setSessionUi();
+        renderDevices();
+        setMessage("");
+      }
+
+      // remotePairPhoneDevice -> POST /rest/v1/rpc/remote_pair_phone_device { p: {...} }
+      async function callRemote(name, payload = {}) {
+        const rpcName = name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+        const token = await getAccessToken();
+        const res = await fetch(`${RPC_BASE}/${rpcName}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            apikey: SUPABASE_PUBLISHABLE_KEY,
+            authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ p: payload }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          signOut();
+          throw new Error("Oturum suresi doldu. Tekrar giris yapin.");
+        }
+        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `${name}_failed`);
+        return data;
+      }
+
+      async function pairPhone() {
+        setMessage("Telefon eslestiriliyor...");
+        const data = await callRemote("remotePairPhoneDevice", {
+          pairToken: state.pairToken,
+          phoneDeviceId: state.phoneDeviceId,
+          phoneLabel: navigator.userAgent.slice(0, 80),
+        });
+        localStorage.setItem("travianbotRemote.lastPairedMachineId", data.machineId || "");
+        state.pairToken = "";
+        const cleanUrl = new URL(location.href);
+        cleanUrl.searchParams.delete("pairToken");
+        history.replaceState(null, "", cleanUrl.toString());
+        setMessage("Telefon eslestirildi.");
+      }
+
+      async function refreshDevices() {
+        setMessage("Cihazlar aliniyor...");
+        if (state.pairToken) await pairPhone();
+        const data = await callRemote("remoteListDevices", {
+          phoneDeviceId: state.phoneDeviceId,
+        });
+        state.devices = data.devices || [];
+        renderDevices();
+        setMessage(state.devices.length ? "" : "Eslesmis remote cihaz bulunamadi. Masaustu uygulamasindan QR olusturup okutun.");
+      }
+
+      async function sendCommand(machineId, type, payload = {}) {
+        await callRemote("remoteCreateCommand", {
+          machineId,
+          phoneDeviceId: state.phoneDeviceId,
+          type,
+          payload,
+        });
+        setMessage("Komut gonderildi. Sonuc bir sonraki yenilemede gorunur.");
+      }
+
+      async function addTask(machineId, accountId, type) {
+        if (!type) return;
+        const task = {
+          id: crypto.randomUUID(),
+          accountId,
+          type,
+          isEnabled: false,
+          villageOrder: [],
+          config: {},
+          createdAt: Date.now(),
+        };
+        await sendCommand(machineId, "upsertTask", { task });
+        setMessage(
+          "Gorev pasif olarak eklendi. Etkinlestirmek icin Baslat'a basin; " +
+            "detayli ayar icin masaustu uygulamasini kullanin.",
+        );
+      }
+
+      function statusText(lastSeenAt) {
+        const diff = Date.now() - Number(lastSeenAt || 0);
+        if (!lastSeenAt || diff > 60_000) return "offline";
+        return "online";
+      }
+
+      function makeEl(tag, className, text) {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (text !== undefined) element.textContent = text;
+        return element;
+      }
+
+      function makeButton(text, className) {
+        const button = document.createElement("button");
+        if (className) button.className = className;
+        button.textContent = text;
+        return button;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[char]);
+      }
+
+      function configSummary(task) {
+        const config = task.config || {};
+        const parts = [];
+        const villageOrder = task.villageOrder || [];
+        if (villageOrder.length) parts.push(`koy: ${villageOrder.length}`);
+        for (const [key, value] of Object.entries(config)) {
+          if (value === null) continue;
+          const type = typeof value;
+          if (type === "string" || type === "number" || type === "boolean") parts.push(`${key}: ${value}`);
+          else if (Array.isArray(value)) parts.push(`${key}: [${value.length}]`);
+          else if (type === "object") parts.push(`${key}: {…}`);
+        }
+        return parts.length ? parts.join(" · ") : "varsayilan ayarlar";
+      }
+
+      // Bir gorevin ayarlarini telefondan duzenlemek icin form paneli olusturur.
+      // Basit (primitive) config alanlari ayri input olarak; tum config ise
+      // "Gelismis JSON" alaninda gosterilir. Kaydet, yalnizca degisen alanlari
+      // updateTaskConfig ile gonderir (merge); secret alanlar panele hic gelmez.
+      function buildTaskEditor(machineId, account, task) {
+        const editor = makeEl("div", "card");
+        editor.style.cssText = "margin-top:8px;display:none";
+
+        const config = task.config || {};
+        const villages = account.villages || [];
+        const villageBoxes = [];
+
+        if (villages.length) {
+          const villageWrap = makeEl("div");
+          villageWrap.style.marginBottom = "10px";
+          villageWrap.appendChild(makeEl("div", "muted", "Koyler"));
+          const order = (task.villageOrder || []).map(String);
+          for (const village of villages) {
+            const id = String(village.villageId);
+            const label = makeEl("label");
+            label.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 0";
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.style.width = "auto";
+            checkbox.checked = order.includes(id);
+            checkbox.dataset.villageId = id;
+            label.appendChild(checkbox);
+            label.appendChild(makeEl("span", null, `${village.name} (${village.x}|${village.y})`));
+            villageWrap.appendChild(label);
+            villageBoxes.push(checkbox);
+          }
+          editor.appendChild(villageWrap);
+        }
+
+        const fieldInputs = [];
+        const fieldsWrap = makeEl("div");
+        for (const [key, value] of Object.entries(config)) {
+          const type = value === null ? "string" : typeof value;
+          if (type !== "string" && type !== "number" && type !== "boolean") continue;
+          const field = makeEl("label");
+          field.style.cssText = "display:block;margin-bottom:8px";
+          field.appendChild(makeEl("div", "muted", key));
+          const input = document.createElement("input");
+          if (type === "boolean") {
+            input.type = "checkbox";
+            input.style.width = "auto";
+            input.checked = !!value;
+          } else {
+            input.type = type === "number" ? "number" : "text";
+            input.value = value === null ? "" : String(value);
+          }
+          input.dataset.key = key;
+          input.dataset.vtype = type;
+          field.appendChild(input);
+          fieldsWrap.appendChild(field);
+          fieldInputs.push(input);
+        }
+        if (!fieldInputs.length) {
+          fieldsWrap.appendChild(makeEl("div", "muted", "Basit alan yok — Gelismis JSON kullanin."));
+        }
+        editor.appendChild(fieldsWrap);
+
+        const advanced = document.createElement("details");
+        const summary = document.createElement("summary");
+        summary.textContent = "Gelismis (tum config JSON)";
+        summary.className = "muted";
+        advanced.appendChild(summary);
+        const useAdvancedLabel = makeEl("label");
+        useAdvancedLabel.style.cssText = "display:flex;align-items:center;gap:8px;margin:8px 0";
+        const useAdvanced = document.createElement("input");
+        useAdvanced.type = "checkbox";
+        useAdvanced.style.width = "auto";
+        useAdvancedLabel.appendChild(useAdvanced);
+        useAdvancedLabel.appendChild(makeEl("span", null, "Basit alanlar yerine bu JSON'u kaydet"));
+        advanced.appendChild(useAdvancedLabel);
+        const textarea = document.createElement("textarea");
+        textarea.rows = 8;
+        textarea.style.cssText = "width:100%;font-family:monospace;font-size:12px";
+        textarea.value = JSON.stringify(config, null, 2);
+        advanced.appendChild(textarea);
+        editor.appendChild(advanced);
+
+        const actions = makeEl("div", "actions");
+        const saveButton = makeButton("Kaydet");
+        saveButton.style.cssText = "width:auto;padding:0 16px";
+        const cancelButton = makeButton("Kapat", "secondary");
+        cancelButton.style.cssText = "width:auto;padding:0 16px";
+        cancelButton.onclick = () => {
+          editor.style.display = "none";
+        };
+        actions.appendChild(saveButton);
+        actions.appendChild(cancelButton);
+        editor.appendChild(actions);
+
+        saveButton.onclick = () => {
+          let configPatch;
+          if (useAdvanced.checked) {
+            try {
+              const parsed = JSON.parse(textarea.value || "{}");
+              if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not_object");
+              configPatch = parsed;
+            } catch {
+              return setMessage("Gecersiz JSON. Lutfen duzeltin.");
+            }
+          } else {
+            configPatch = {};
+            for (const input of fieldInputs) {
+              const key = input.dataset.key;
+              const vtype = input.dataset.vtype;
+              if (vtype === "boolean") configPatch[key] = input.checked;
+              else if (vtype === "number") {
+                const num = Number(input.value);
+                if (Number.isFinite(num)) configPatch[key] = num;
+              } else configPatch[key] = input.value;
+            }
+          }
+          const payload = { taskId: task.id, configPatch };
+          if (villageBoxes.length) {
+            payload.villageOrder = villageBoxes.filter((box) => box.checked).map((box) => box.dataset.villageId);
+          }
+          sendCommand(machineId, "updateTaskConfig", payload)
+            .then(() => {
+              editor.style.display = "none";
+            })
+            .catch((e) => setMessage(e.message));
+        };
+
+        return editor;
+      }
+
+      function renderDevices() {
+        const root = $("deviceList");
+        root.replaceChildren();
+        for (const device of state.devices) {
+          const card = document.createElement("section");
+          card.className = "card";
+          card.innerHTML = `
+            <div class="row">
+              <div>
+                <strong>${escapeHtml(device.machineId || "Cihaz")}</strong>
+                <div class="muted mono">v${escapeHtml(device.appVersion || "-")} · ${escapeHtml(statusText(device.lastSeenAt))}</div>
+              </div>
+              <span class="pill">${device.remoteControlEnabled ? "acik" : "kapali"}</span>
+            </div>
+          `;
+
+          for (const account of device.accounts || []) {
+            const row = document.createElement("div");
+            row.className = "card";
+            row.style.margin = "12px 0 0";
+            row.innerHTML = `
+              <div class="row">
+                <div>
+                  <strong>${escapeHtml(account.avatarName || account.username || "Hesap")}</strong>
+                  <div class="muted">${escapeHtml(account.serverUrl || "")}</div>
+                  <div class="muted mono">${escapeHtml(account.status || "idle")} · ${escapeHtml(account.enabledTaskCount || 0)}/${escapeHtml(account.taskCount || 0)} gorev</div>
+                  <div class="muted mono" style="font-size:11px">${escapeHtml(account.networkMode || "tor")}${account.sleepModeEnabled ? " · uyku modu acik" : ""}</div>
+                </div>
+                <span class="pill">${escapeHtml(account.ip || "-")}</span>
+              </div>
+              <div class="actions">
+                <button data-action="start">Baslat</button>
+                <button class="danger" data-action="stop">Durdur</button>
+              </div>
+            `;
+            row.querySelector('[data-action="start"]').onclick = () =>
+              sendCommand(device.machineId, "startAccount", { accountId: account.id });
+            row.querySelector('[data-action="stop"]').onclick = () =>
+              sendCommand(device.machineId, "stopAccount", { accountId: account.id });
+
+            const tasks = account.tasks || [];
+            const tasksWrap = document.createElement("div");
+            tasksWrap.style.marginTop = "10px";
+            const heading = document.createElement("h2");
+            heading.textContent = "Gorevler";
+            tasksWrap.appendChild(heading);
+
+            for (const task of tasks) {
+              const taskWrap = document.createElement("div");
+              taskWrap.style.marginTop = "8px";
+
+              const taskRow = document.createElement("div");
+              taskRow.className = "row";
+              taskRow.innerHTML = `
+                <div style="min-width:0">
+                  <strong>${escapeHtml(taskLabel(task.type))}</strong>
+                  <div class="muted mono">${task.isEnabled ? "aktif" : "pasif"}</div>
+                  <div class="muted" style="font-size:11px;margin-top:2px;word-break:break-word">${escapeHtml(configSummary(task))}</div>
+                </div>
+                <div style="display:flex;gap:6px;width:auto">
+                  <button data-action="edit" class="secondary" style="width:auto;padding:0 12px">Duzenle</button>
+                  <button data-action="toggle" class="${task.isEnabled ? "danger" : ""}" style="width:auto;padding:0 12px">
+                    ${task.isEnabled ? "Durdur" : "Baslat"}
+                  </button>
+                  <button data-action="remove" class="secondary" style="width:auto;padding:0 12px">Sil</button>
+                </div>
+              `;
+
+              const editor = buildTaskEditor(device.machineId, account, task);
+              taskRow.querySelector('[data-action="edit"]').onclick = () => {
+                editor.style.display = editor.style.display === "none" ? "block" : "none";
+              };
+              taskRow.querySelector('[data-action="toggle"]').onclick = () =>
+                sendCommand(device.machineId, "toggleTask", { taskId: task.id, enabled: !task.isEnabled }).catch((e) =>
+                  setMessage(e.message),
+                );
+              taskRow.querySelector('[data-action="remove"]').onclick = () => {
+                if (!confirm(`"${taskLabel(task.type)}" gorevini silmek istiyor musunuz?`)) return;
+                sendCommand(device.machineId, "removeTask", { taskId: task.id }).catch((e) => setMessage(e.message));
+              };
+
+              taskWrap.appendChild(taskRow);
+              taskWrap.appendChild(editor);
+              tasksWrap.appendChild(taskWrap);
+            }
+
+            if (!tasks.length) {
+              const empty = document.createElement("div");
+              empty.className = "muted";
+              empty.style.marginTop = "8px";
+              empty.textContent = "Henuz gorev yok.";
+              tasksWrap.appendChild(empty);
+            }
+
+            const addRow = document.createElement("div");
+            addRow.style.cssText = "display:flex;gap:8px;margin-top:10px";
+            const addSelect = document.createElement("select");
+            addSelect.style.flex = "1";
+            for (const type of ADDABLE_TASK_TYPES) {
+              const opt = document.createElement("option");
+              opt.value = type;
+              opt.textContent = taskLabel(type);
+              addSelect.appendChild(opt);
+            }
+            const addButton = document.createElement("button");
+            addButton.textContent = "Gorev ekle";
+            addButton.style.cssText = "width:auto;padding:0 16px";
+            addButton.onclick = () =>
+              addTask(device.machineId, account.id, addSelect.value).catch((e) => setMessage(e.message));
+            addRow.appendChild(addSelect);
+            addRow.appendChild(addButton);
+            tasksWrap.appendChild(addRow);
+
+            row.appendChild(tasksWrap);
+
+            card.appendChild(row);
+          }
+          root.appendChild(card);
+        }
+      }
+
+      $("loginButton").onclick = () => signIn().catch((e) => setMessage(e.message));
+      $("logoutButton").onclick = signOut;
+      $("refreshButton").onclick = () => refreshDevices().catch((e) => setMessage(e.message));
+      $("stopAllButton").onclick = async () => {
+        const device = state.devices[0];
+        if (!device) return setMessage("Cihaz yok.");
+        await sendCommand(device.machineId, "stopAll");
+      };
+
+      setSessionUi();
+      if (state.refreshToken) refreshDevices().catch((e) => setMessage(e.message));
+    </script>
+  </body>
+</html>

@@ -6,186 +6,660 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; connect-src https://smsvzsbxsorogipyoivs.supabase.co; base-uri 'none'; form-action 'none'; object-src 'none';"
     />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <meta name="theme-color" content="#1b1f27" />
-    <title>TravianBot Remote</title>
+    <meta name="theme-color" content="#f7f3ec" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#16191f" media="(prefers-color-scheme: dark)" />
+    <title>TravianBot Uzaktan Kontrol</title>
     <style>
       :root {
-        color-scheme: light;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #f6f2eb;
-        color: #211c16;
+        color-scheme: light dark;
+        --bg: #f7f3ec;
+        --surface: #ffffff;
+        --surface-2: #f3eee6;
+        --line: #e6dfd4;
+        --text: #1f1b16;
+        --muted: #6f665b;
+        --primary: #c97418;
+        --primary-press: #ad6212;
+        --on-primary: #ffffff;
+        --ok: #1f8a4c;
+        --ok-bg: #e3f4ea;
+        --info: #2a6fb0;
+        --info-bg: #e4eff9;
+        --warn: #9a6a00;
+        --warn-bg: #fbf0d3;
+        --danger: #c0392b;
+        --danger-bg: #fbe6e3;
+        --neutral-bg: #eee8de;
+        --shadow: 0 1px 2px rgba(43, 32, 18, 0.05), 0 6px 20px rgba(43, 32, 18, 0.06);
+        --radius: 16px;
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 16px;
+        line-height: 1.4;
       }
-      * { box-sizing: border-box; }
-      body { margin: 0; }
-      main { margin: 0 auto; max-width: 760px; padding: 18px; }
-      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-      h1 { margin: 0; font-size: 22px; letter-spacing: 0; }
-      h2 { margin: 0 0 10px; font-size: 14px; color: #6b6258; text-transform: uppercase; }
-      input, select, button {
-        width: 100%;
-        min-height: 42px;
-        border-radius: 8px;
-        border: 1px solid #d6cdc1;
-        font: inherit;
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16191f;
+          --surface: #1f232b;
+          --surface-2: #272c36;
+          --line: #323845;
+          --text: #eef0f4;
+          --muted: #9aa3b2;
+          --primary: #e08a2c;
+          --primary-press: #c97418;
+          --on-primary: #1b1206;
+          --ok: #4cc27f;
+          --ok-bg: #173526;
+          --info: #6fb1ec;
+          --info-bg: #1a2f44;
+          --warn: #e3b545;
+          --warn-bg: #3a2f12;
+          --danger: #f0776a;
+          --danger-bg: #40201c;
+          --neutral-bg: #2c323d;
+          --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+        }
       }
-      input, select { padding: 0 12px; background: #fffaf4; color: inherit; }
-      button {
-        cursor: pointer;
-        border-color: #b86517;
-        background: #c97418;
-        color: white;
-        font-weight: 700;
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      [hidden] { display: none !important; }
+      html { background: var(--bg); }
+      body { margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; min-height: 100dvh; }
+      body.locked { overflow: hidden; }
+      button, input, select, textarea { font: inherit; color: inherit; }
+      button { cursor: pointer; }
+      svg { width: 20px; height: 20px; display: block; flex: none; }
+
+      /* Üst çubuk */
+      .topbar {
+        position: sticky; top: 0; z-index: 10;
+        display: flex; align-items: center; gap: 12px;
+        padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--line);
       }
-      button.secondary { background: #fffaf4; color: #3a3026; border-color: #d6cdc1; }
-      button.danger { background: #b44435; border-color: #9f392d; }
-      button:disabled { cursor: not-allowed; opacity: .55; }
-      .card {
-        margin-bottom: 12px;
-        border: 1px solid #ded5ca;
-        border-radius: 8px;
-        background: #fffaf4;
-        padding: 14px;
-        box-shadow: 0 1px 2px rgba(43, 32, 18, .06);
+      .topbar img { width: 36px; height: 36px; border-radius: 10px; }
+      .topbar .titles { flex: 1; min-width: 0; }
+      .topbar h1 { margin: 0; font-size: 17px; font-weight: 700; }
+      .topbar .sub { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .icon-btn {
+        width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+        border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text);
       }
-      .grid { display: grid; gap: 10px; }
-      .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-      .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-      .muted { color: #746b61; font-size: 13px; }
-      .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
-      .pill { border-radius: 999px; background: #eee5d9; padding: 4px 8px; font-size: 12px; font-weight: 700; }
-      .hidden { display: none; }
-      .toolbar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .icon-btn:active { background: var(--surface-2); }
+      .spin svg { animation: spin 0.9s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      main { max-width: 720px; margin: 0 auto; padding: 16px 16px calc(40px + env(safe-area-inset-bottom)); }
+
+      /* Kartlar */
+      .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+      .stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+
+      /* Butonlar */
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 46px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent;
+        font-weight: 650; font-size: 15px; background: var(--primary); color: var(--on-primary);
+      }
+      .btn:active { background: var(--primary-press); }
+      .btn.block { width: 100%; }
+      .btn.small { min-height: 40px; padding: 0 14px; font-size: 14px; }
+      .btn.ghost { background: var(--surface); color: var(--text); border-color: var(--line); }
+      .btn.ghost:active { background: var(--surface-2); }
+      .btn.danger { background: var(--danger); color: #fff; }
+      .btn.danger-ghost { background: var(--surface); color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--line)); }
+      .btn.danger-ghost:active { background: var(--danger-bg); }
+      .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+      /* Rozetler */
+      .badge {
+        display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+        font-size: 13px; font-weight: 650; background: var(--neutral-bg); color: var(--muted); white-space: nowrap;
+      }
+      .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+      .badge.ok { background: var(--ok-bg); color: var(--ok); }
+      .badge.info { background: var(--info-bg); color: var(--info); }
+      .badge.warn { background: var(--warn-bg); color: var(--warn); }
+      .badge.danger { background: var(--danger-bg); color: var(--danger); }
+      .badge.pulse::before { animation: pulse 1.2s ease-in-out infinite; }
+      @keyframes pulse { 50% { opacity: 0.25; } }
+      .chip {
+        display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 8px;
+        background: var(--surface-2); color: var(--muted); font-size: 13px; white-space: nowrap;
+      }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+      /* Uyarı şeritleri */
+      .notice { display: flex; gap: 10px; padding: 12px 14px; border-radius: 12px; font-size: 14px; background: var(--warn-bg); color: var(--warn); }
+      .notice.danger { background: var(--danger-bg); color: var(--danger); }
+      .notice svg { margin-top: 1px; }
+
+      /* Giriş */
+      .login { max-width: 420px; margin: 8vh auto 0; padding: 24px; }
+      .login h2 { margin: 0 0 4px; font-size: 22px; }
+      .login p { margin: 0 0 20px; color: var(--muted); font-size: 15px; }
+      .field { display: grid; gap: 6px; margin-bottom: 14px; }
+      .field > span, .field-label { font-size: 14px; font-weight: 600; }
+      .field small { color: var(--muted); font-size: 13px; }
+      .input, select.input, textarea.input {
+        width: 100%; min-height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line);
+        background: var(--surface); font-size: 16px; outline: none;
+      }
+      textarea.input { padding: 12px 14px; min-height: 180px; font-size: 14px; resize: vertical; }
+      .input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent); }
+      .input-group { display: flex; gap: 8px; }
+      .input-group .input { flex: 1; min-width: 0; }
+      .input-group select.input { flex: 0 0 110px; }
+      .suffix { align-self: center; color: var(--muted); font-size: 14px; min-width: 34px; }
+      .form-error { margin: 0 0 14px; padding: 10px 12px; border-radius: 10px; background: var(--danger-bg); color: var(--danger); font-size: 14px; }
+
+      /* Cihaz */
+      .device-head { display: flex; align-items: center; gap: 12px; padding: 4px 2px; }
+      .device-head .ico { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); }
+      .device-head .info { flex: 1; min-width: 0; }
+      .device-head strong { font-size: 17px; }
+      .device-head .meta { font-size: 14px; color: var(--muted); }
+      .device-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .device-actions .btn { padding: 0 8px; font-size: 14px; white-space: nowrap; }
+      .device + .device { margin-top: 28px; }
+
+      /* Hesap */
+      .account-head { display: flex; align-items: center; gap: 12px; padding: 14px; width: 100%; border: 0; background: none; text-align: left; }
+      .avatar {
+        width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center;
+        background: color-mix(in srgb, var(--primary) 16%, var(--surface)); color: var(--primary); font-weight: 700; font-size: 18px;
+      }
+      .account-head .info { flex: 1; min-width: 0; }
+      .account-head .name { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .account-head .server { font-size: 14px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .account-head .side { display: grid; justify-items: end; gap: 6px; }
+      .chev { color: var(--muted); transition: transform 0.2s; }
+      .open > .account-head .chev { transform: rotate(180deg); }
+      .account-body { padding: 0 14px 14px; display: grid; gap: 12px; }
+      .account-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+      .section-title { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--muted); margin-top: 4px; }
+
+      /* Görev satırı */
+      .tasks { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+      .task { display: flex; align-items: center; gap: 8px; padding-right: 12px; }
+      .task + .task { border-top: 1px solid var(--line); }
+      .task-main { flex: 1; min-width: 0; padding: 12px 4px 12px 14px; border: 0; background: none; text-align: left; display: grid; gap: 6px; }
+      .task-main:active { background: var(--surface-2); }
+      .task-title { font-weight: 650; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+      .task.off .task-title { color: var(--muted); }
+      .sync { font-size: 12px; font-weight: 600; color: var(--info); }
+      .empty { padding: 18px 14px; text-align: center; color: var(--muted); font-size: 14px; }
+
+      /* Anahtar (switch) */
+      .switch {
+        position: relative; width: 52px; height: 32px; flex: none; border-radius: 999px; border: 0; padding: 0;
+        background: var(--line); transition: background 0.18s;
+      }
+      .switch::after {
+        content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%;
+        background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); transition: transform 0.18s;
+      }
+      .switch[aria-checked="true"] { background: var(--ok); }
+      .switch[aria-checked="true"]::after { transform: translateX(20px); }
+      .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 48px; padding: 6px 0; }
+      .switch-row + .switch-row { border-top: 1px solid var(--line); }
+      .switch-row span { font-size: 15px; }
+
+      /* Seçilebilir etiketler (köyler vb.) */
+      .picks { display: flex; flex-wrap: wrap; gap: 8px; }
+      .pick {
+        min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line);
+        background: var(--surface); font-size: 14px; display: inline-flex; align-items: center; gap: 6px;
+      }
+      .pick[aria-pressed="true"] { background: color-mix(in srgb, var(--primary) 14%, var(--surface)); border-color: var(--primary); color: var(--primary); font-weight: 650; }
+      .pick small { color: inherit; opacity: 0.7; }
+
+      /* Alt sayfa (sheet) */
+      .backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.18s; }
+      .sheet {
+        width: 100%; max-width: 560px; max-height: 92dvh; display: flex; flex-direction: column;
+        background: var(--surface); border-radius: 20px 20px 0 0; animation: rise 0.22s ease-out;
+      }
       @media (min-width: 620px) {
-        .login-grid { grid-template-columns: 1fr 1fr auto; align-items: end; }
-        .login-grid button { width: 120px; }
+        .backdrop { align-items: center; padding: 24px; }
+        .sheet { border-radius: 20px; max-height: 86dvh; }
       }
+      @keyframes fade { from { opacity: 0; } }
+      @keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+      .sheet-head { display: flex; align-items: center; gap: 12px; padding: 16px 16px 12px; border-bottom: 1px solid var(--line); }
+      .sheet-head .titles { flex: 1; min-width: 0; }
+      .sheet-head h3 { margin: 0; font-size: 18px; }
+      .sheet-head .sub { font-size: 14px; color: var(--muted); }
+      .sheet-body { padding: 16px; overflow-y: auto; -webkit-overflow-scrolling: touch; display: grid; gap: 18px; }
+      .sheet-foot { display: flex; gap: 10px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
+      .sheet-foot .grow { flex: 1; }
+      .group-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+      .ro-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 15px; }
+      .ro-row + .ro-row { border-top: 1px solid var(--line); }
+      .ro-row span:last-child { color: var(--muted); text-align: right; }
+      .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+      details summary { cursor: pointer; font-size: 14px; color: var(--muted); padding: 6px 0; }
+      .option { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); text-align: left; }
+      .option:active { background: var(--surface-2); }
+      .option .info { flex: 1; }
+      .option strong { display: block; font-size: 15px; }
+      .option small { color: var(--muted); font-size: 13px; }
+
+      /* Bildirim (toast) */
+      .toasts { position: fixed; left: 0; right: 0; top: calc(72px + env(safe-area-inset-top)); z-index: 80; display: grid; gap: 8px; justify-items: center; padding: 0 16px; pointer-events: none; }
+      .toast {
+        max-width: 520px; padding: 12px 16px; border-radius: 14px; font-size: 15px; font-weight: 550;
+        background: #23262d; color: #fff; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3); animation: rise 0.2s ease-out;
+      }
+      .toast.ok { background: #1c7a44; }
+      .toast.error { background: #b23629; }
+
+      /* Boş durum / iskelet */
+      .welcome { padding: 24px 20px; text-align: center; }
+      .welcome h2 { margin: 0 0 6px; font-size: 19px; }
+      .welcome p { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+      .steps { text-align: left; display: grid; gap: 10px; margin: 0 0 18px; padding: 0; list-style: none; counter-reset: s; }
+      .steps li { display: flex; gap: 12px; align-items: flex-start; font-size: 15px; counter-increment: s; }
+      .steps li::before {
+        content: counter(s); flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+        background: color-mix(in srgb, var(--primary) 16%, var(--surface)); color: var(--primary); font-weight: 700; font-size: 14px;
+      }
+      .skeleton { height: 96px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+      @keyframes shimmer { to { background-position: -200% 0; } }
+      @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
     </style>
   </head>
   <body>
+    <div class="topbar">
+      <img src="icon-192.png" alt="" />
+      <div class="titles">
+        <h1>TravianBot</h1>
+        <div class="sub" id="sessionLabel">Uzaktan kontrol</div>
+      </div>
+      <button class="icon-btn" id="refreshButton" aria-label="Yenile" hidden></button>
+      <button class="icon-btn" id="logoutButton" aria-label="Çıkış yap" hidden></button>
+    </div>
+
     <main>
-      <header>
-        <div>
-          <h1>TravianBot Remote</h1>
-          <div class="muted" id="sessionLabel">Giris yapilmadi</div>
-        </div>
-        <button class="secondary hidden" id="logoutButton" style="width:auto;padding:0 12px">Cikis</button>
-      </header>
-
-      <section class="card" id="loginCard">
-        <h2>Giris</h2>
-        <div class="grid login-grid">
-          <input id="emailInput" autocomplete="email" placeholder="E-posta" />
-          <input id="passwordInput" autocomplete="current-password" type="password" placeholder="Sifre" />
-          <button id="loginButton">Giris</button>
-        </div>
+      <section class="card login" id="loginView" hidden>
+        <h2>Giriş yap</h2>
+        <p>Bilgisayardaki TravianBot hesabınla giriş yap.</p>
+        <div class="form-error" id="loginError" hidden></div>
+        <label class="field">
+          <span>E-posta</span>
+          <input class="input" id="emailInput" type="email" autocomplete="email" inputmode="email" autocapitalize="none" />
+        </label>
+        <label class="field">
+          <span>Şifre</span>
+          <input class="input" id="passwordInput" type="password" autocomplete="current-password" />
+        </label>
+        <button class="btn block" id="loginButton">Giriş yap</button>
       </section>
 
-      <section class="card hidden" id="controlCard">
-        <div class="toolbar">
-          <button id="refreshButton" class="secondary">Yenile</button>
-          <button id="stopAllButton" class="danger">Tumunu durdur</button>
-        </div>
+      <section id="appView" hidden>
+        <div class="notice danger" id="connectionNotice" hidden style="margin-bottom: 12px"></div>
+        <div id="deviceList"></div>
       </section>
-
-      <section id="deviceList" class="grid"></section>
-      <p class="muted mono" id="message"></p>
     </main>
 
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
     <script>
-      // Supabase (2026-11-07'ye kadar Firebase). Publishable key gizli DEGILDIR;
-      // yetki RLS + SQL RPC icindeki auth.uid() kontrolu ile saglanir.
-      // shared/backendConfig.ts ile ayni degerler olmalidir.
+      // Supabase (2026-11-07'ye kadar Firebase). Publishable key gizli DEĞİLDİR;
+      // yetki RLS + SQL RPC içindeki auth.uid() kontrolü ile sağlanır.
+      // shared/backendConfig.ts ile aynı değerler olmalıdır.
       const SUPABASE_URL = "https://smsvzsbxsorogipyoivs.supabase.co";
       const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_mSuUDrJ3nCsI2M2MbkxD5w_qlin_Jv9";
       const AUTH_BASE = `${SUPABASE_URL}/auth/v1`;
       const RPC_BASE = `${SUPABASE_URL}/rest/v1/rpc`;
       const params = new URLSearchParams(location.search);
 
+      const REFRESH_MS = 15_000; // Masaüstü de 15 sn'de bir durum gönderir.
+      const PENDING_MS = 45_000; // Komutun bilgisayarda uygulanıp panele yansıması için azami bekleme.
+      const ONLINE_MS = 90_000;
+
+      const store = {
+        get(key) {
+          try { return localStorage.getItem(`travianbotRemote.${key}`) || ""; } catch { return ""; }
+        },
+        set(key, value) {
+          try { localStorage.setItem(`travianbotRemote.${key}`, value); } catch {}
+        },
+        remove(key) {
+          try { localStorage.removeItem(`travianbotRemote.${key}`); } catch {}
+        },
+      };
+
       const state = {
-        accessToken: localStorage.getItem("travianbotRemote.accessToken") || "",
-        refreshToken: localStorage.getItem("travianbotRemote.refreshToken") || "",
-        expiresAt: Number(localStorage.getItem("travianbotRemote.expiresAt") || 0),
-        email: localStorage.getItem("travianbotRemote.email") || "",
+        accessToken: store.get("accessToken"),
+        refreshToken: store.get("refreshToken"),
+        expiresAt: Number(store.get("expiresAt") || 0),
+        email: store.get("email"),
         phoneDeviceId: readPhoneDeviceId(),
         pairToken: params.get("pairToken") || "",
         devices: [],
+        loaded: false,
+        loading: false,
+        expanded: readJson(store.get("expanded")),
       };
-      // Eski (Firebase) oturum anahtarlarini temizle.
-      localStorage.removeItem("travianbotRemote.idToken");
-      localStorage.removeItem("travianbotRemote.apiBase");
+      // Eski (Firebase) oturum anahtarlarını temizle.
+      store.remove("idToken");
+      store.remove("apiBase");
+
+      // Gönderilmiş ama bilgisayarın henüz uygulamadığı değişiklikler. Panel bunları
+      // sunucudan gelen durumun üzerine bindirir; böylece anahtar geri zıplamaz.
+      const pending = { tasks: new Map(), accounts: new Map(), added: new Map() };
 
       const $ = (id) => document.getElementById(id);
 
-      const TASK_LABELS = {
-        travcoScan: "Inaktif Koy Tarama",
-        oasisFinder: "Vaha Bulucu",
-        sequentialAttack: "Sirali Saldiri",
-        troopTraining: "Asker Egitimi",
-        festival: "Festival",
-        resourceProduction: "Hammadde Uretimi",
-        buildVillage: "Koy Insa",
-        upgradeBuilding: "Hammadde Yukseltme",
-        armorUpgrade: "Zirh Yukseltme",
-        sendRaid: "Yagma Listesi",
-        buildBuilding: "Bina Insa ve Seviye",
-        heroAdventure: "Kahraman Macera",
-        aiCompleteTravianTasks: "Yapay Zeka ile Odevler",
-        travcoToolsConnect: "TravcoTools Baglan",
-        gettertoolsConnect: "Gettertools Baglan",
-      };
-      const taskLabel = (type) => TASK_LABELS[type] || type;
-
-      // Telefon panelinden eklenebilen gorevler: config semasi bos ({}) ile
-      // varsayilanlara dusen ve masaustu dialog'unu bozmayan tekrarli gorevler.
-      // Karmasik config gerektirenler (Sirali Saldiri, Asker Egitimi, Bina Insa,
-      // TravcoTools/Gettertools) masaustu uygulamasindan olusturulmalidir.
-      const ADDABLE_TASK_TYPES = [
-        "upgradeBuilding",
-        "sendRaid",
-        "festival",
-        "travcoScan",
-        "heroAdventure",
-        "aiCompleteTravianTasks",
-      ];
-
-      function setMessage(text) {
-        $("message").textContent = text || "";
+      function readJson(text) {
+        try {
+          const value = JSON.parse(text || "{}");
+          return value && typeof value === "object" ? value : {};
+        } catch {
+          return {};
+        }
       }
 
       function readPhoneDeviceId() {
-        const existing = localStorage.getItem("travianbotRemote.phoneDeviceId");
+        const existing = store.get("phoneDeviceId");
         if (existing) return existing;
         const bytes = new Uint8Array(16);
         crypto.getRandomValues(bytes);
         const id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-        localStorage.setItem("travianbotRemote.phoneDeviceId", id);
+        store.set("phoneDeviceId", id);
         return id;
       }
 
-      function setSessionUi() {
-        const signedIn = !!state.refreshToken;
-        $("loginCard").classList.toggle("hidden", signedIn);
-        $("controlCard").classList.toggle("hidden", !signedIn);
-        $("logoutButton").classList.toggle("hidden", !signedIn);
-        $("sessionLabel").textContent = signedIn ? state.email : "Giris yapilmadi";
+      // ---------- Sözlükler ----------
+
+      const TASK_LABELS = {
+        travcoScan: "İnaktif Köy Tarama",
+        oasisFinder: "Vaha Bulucu",
+        sequentialAttack: "Sıralı Saldırı",
+        troopTraining: "Asker Eğitimi",
+        festival: "Festival",
+        resourceProduction: "Hammadde Üretimi",
+        buildVillage: "Köy İnşa",
+        upgradeBuilding: "Hammadde Yükseltme",
+        armorUpgrade: "Zırh Yükseltme",
+        sendRaid: "Yağma Listesi",
+        buildBuilding: "Bina İnşa ve Seviye",
+        heroAdventure: "Kahraman Macera",
+        aiCompleteTravianTasks: "Yapay Zeka ile Ödevler",
+        travcoToolsConnect: "TravcoTools Bağlantısı",
+        gettertoolsConnect: "Gettertools Bağlantısı",
+        settlementPlanner: "2. Köy Planı",
+      };
+      const taskLabel = (type) => TASK_LABELS[type] || humanize(type);
+
+      // Telefon panelinden eklenebilen görevler: config şeması boş ({}) ile
+      // varsayılanlara düşen ve masaüstü dialog'unu bozmayan tekrarlı görevler.
+      // Karmaşık config gerektirenler (Sıralı Saldırı, Asker Eğitimi, Bina İnşa,
+      // TravcoTools/Gettertools) masaüstü uygulamasından oluşturulmalıdır.
+      const ADDABLE_TASKS = [
+        ["upgradeBuilding", "Hammadde alanlarını sırayla yükseltir"],
+        ["sendRaid", "Yağma listelerini belirli aralıklarla gönderir"],
+        ["festival", "Belediyede festival düzenler"],
+        ["travcoScan", "İnaktif köyleri bulup yağma listesine ekler"],
+        ["heroAdventure", "Kahramanı maceralara gönderir"],
+        ["aiCompleteTravianTasks", "Oyun içi ödevleri yapay zeka ile tamamlar"],
+      ];
+
+      const STATUS = {
+        idle: ["Durduruldu", ""],
+        starting: ["Başlatılıyor", "info pulse"],
+        running: ["Çalışıyor", "ok"],
+        waiting: ["Beklemede", "ok"],
+        sleeping: ["Uykuda", "info"],
+        stopping: ["Durduruluyor", "warn pulse"],
+        error: ["Hata", "danger"],
+      };
+      const ACTIVE_STATUSES = new Set(["starting", "running", "waiting", "sleeping"]);
+      const NETWORK_LABELS = { direct: "Yerel IP", tor: "Tor", custom_proxy: "Proxy" };
+
+      // Görev ayarlarının okunabilir adları. Bilinmeyen alanlar humanize() ile gösterilir.
+      const FIELDS = {
+        intervalSeconds: { label: "Tekrar aralığı", kind: "duration" },
+        delaySeconds: { label: "Başlangıç gecikmesi", unit: "sn" },
+        adWaitTimeoutSeconds: { label: "Reklam bekleme süresi", unit: "sn" },
+        maxLevel: { label: "Azami seviye" },
+        minResourceBuffer: { label: "Kasada bırakılacak kaynak" },
+        strategy: { label: "Yükseltme sırası", options: { lowest_first: "Önce en düşük seviye", balanced: "Dengeli" } },
+        resourceTypes: { label: "Hammadde türleri", multi: { wood: "Odun", clay: "Tuğla", iron: "Demir", crop: "Tahıl" } },
+        adMode: { label: "Reklamla hızlandırma", options: { never: "Kapalı", user_watches: "Reklam izle" } },
+        adFallbackToPlain: { label: "Reklam yoksa normal yükselt" },
+        useAdBoost: { label: "Reklamla hızlandır" },
+        topUpFromHero: { label: "Eksik kaynağı kahramandan tamamla" },
+        instantFinishWithGold: { label: "Altınla hemen bitir" },
+        instantFinishMinHours: { label: "Altınla bitirme alt sınırı", unit: "saat" },
+        useGeminiVision: { label: "Yapay zeka ile ekran analizi" },
+        scanAllPages: { label: "Tüm sayfaları tara" },
+        minConfidence: { label: "En az güven (0–1)" },
+        maxActionsPerRun: { label: "Tur başına en fazla işlem" },
+        claimRewards: { label: "Ödülleri topla" },
+        useNpc: { label: "NPC takası kullan" },
+        reserveResourcePercent: { label: "Kasada kalacak kaynak", unit: "%" },
+        retryOnceOnUnavailable: { label: "Uygun değilse bir kez daha dene" },
+        includeDifficultAdventures: { label: "Zor maceralara da git" },
+        watchAdForDuration: { label: "Süreyi kısaltmak için reklam izle" },
+        watchAdForDifficulty: { label: "Zorluğu düşürmek için reklam izle" },
+        centerX: { label: "Merkez X" },
+        centerY: { label: "Merkez Y" },
+        inactiveDays: { label: "İnaktiflik süresi", unit: "gün" },
+        minDistance: { label: "En az mesafe" },
+        maxDistance: { label: "En fazla mesafe" },
+        playerPopMin: { label: "Oyuncu nüfusu (en az)" },
+        playerPopMax: { label: "Oyuncu nüfusu (en fazla)" },
+        villagePopMin: { label: "Köy nüfusu (en az)" },
+        villagePopMax: { label: "Köy nüfusu (en fazla)" },
+        includeNatars: { label: "Natarları dahil et" },
+        farmListNamePrefix: { label: "Yağma listesi ön eki" },
+        farmListName: { label: "Yağma listesi adı" },
+        sourceVillageId: { label: "Kaynak köy", kind: "village" },
+        radius: { label: "Tarama yarıçapı", unit: "kare" },
+        minTotalAnimals: { label: "Hayvan sayısı (en az)" },
+        maxTotalAnimals: { label: "Hayvan sayısı (en fazla)" },
+        onlyWithBonus: { label: "Yalnızca bonuslu vahalar" },
+        attackMode: {
+          label: "Saldırı modu",
+          options: { off: "Kapalı (yalnızca tara)", auto: "Otomatik", selected: "Seçtiğim vahalar", hero: "Kahraman yağması" },
+        },
+        attackEventType: { label: "Saldırı türü", options: { 3: "Normal saldırı", 4: "Yağma" } },
+        eventType: { label: "Saldırı türü", options: { 3: "Normal saldırı", 4: "Yağma", 5: "Destek" } },
+        maxAttacksPerRun: { label: "Tur başına en fazla saldırı" },
+        attackCooldownHours: { label: "Aynı vahaya tekrar saldırı", unit: "saat" },
+        heroAdventurePriority: { label: "Önce macera, sonra yağma" },
+        targetX: { label: "Hedef X" },
+        targetY: { label: "Hedef Y" },
+        launchMode: {
+          label: "Gönderim şekli",
+          options: {
+            automatic: "Otomatik",
+            manual: "Elle",
+            scheduled_arrival: "Varış saatine göre",
+            scheduled_departure: "Çıkış saatine göre",
+          },
+        },
+        targetArrivalTime: { label: "Hedef varış saati", placeholder: "SS:dd:ss" },
+        waveCount: { label: "Dalga sayısı" },
+        maxWavesPerTab: { label: "Sekme başına dalga" },
+        scoutTarget: { label: "Casus hedefi" },
+        catapultTarget1: { label: "Mancınık hedefi 1" },
+        catapultTarget2: { label: "Mancınık hedefi 2" },
+        username: { label: "Kullanıcı adı / e-posta" },
+        syncPlan: { label: "Saldırı planını içe aktar" },
+        planAutoLaunch: { label: "Plandaki saldırıları otomatik gönder" },
+        sendTroops: { label: "Askerlerimi Gettertools'a gönder" },
+        mode: {
+          label: "Plan türü",
+          options: { balanced_hybrid: "Dengeli", military_heavy: "Askeri ağırlıklı", population_cp: "Nüfus / kültür puanı" },
+        },
+        targetPreference: {
+          label: "Hedef tercihi",
+          options: { nearest: "En yakın", balanced_4446: "Dengeli (4-4-4-6)", crop_9c: "9 tahıllı", crop_15c: "15 tahıllı" },
+        },
+        useFestivalForCp: { label: "Kültür puanı için festival düzenle" },
+        useRaidFunding: { label: "Yağmayla kaynak sağla" },
+        // Yalnızca bilgisayardan düzenlenen (iç içe) bölümler
+        buildingQueue: { label: "İnşa sırası" },
+        queue: { label: "Eğitim sırası" },
+        troops: { label: "Asker seti" },
+        planTroopsFake: { label: "Sahte saldırı asker seti" },
+        planTroopsAttack: { label: "Saldırı asker seti" },
+        festivalTypesByVillage: { label: "Köy bazlı festival türü" },
+        intervalsByVillage: { label: "Köy bazlı aralıklar" },
+        intervalsByFarmList: { label: "Liste bazlı aralıklar" },
+        skipLossTargetsByVillage: { label: "Kayıp verilen hedefleri atla" },
+        tribes: { label: "Irklar" },
+        targetTile: { label: "Hedef kare" },
+      };
+      // Panelde gösterilmeyen teknik alanlar (zaman damgaları, iç kimlikler, uzaktan değiştirilemeyen adres).
+      const HIDDEN_FIELDS = new Set(["loginUrl", "departureAtMs", "plannedArrivalAtMs", "gettertoolsPlanId"]);
+
+      const ERROR_TEXT = {
+        unauthenticated: "Oturum süresi doldu. Tekrar giriş yap.",
+        phone_not_paired: "Bu telefon eşleştirilmemiş. Bilgisayardaki uygulamadan yeni bir QR oluşturup okut.",
+        device_not_found: "Bilgisayar bulunamadı. Uygulamada uzaktan kontrolün açık olduğundan emin ol.",
+        invalid_fields: "İstek geçersiz. Sayfayı yenileyip tekrar dene.",
+        payload_too_large: "Ayarlar gönderilemeyecek kadar büyük.",
+      };
+
+      function humanize(key) {
+        const text = String(key || "")
+          .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+          .replace(/[_-]+/g, " ")
+          .trim();
+        return text ? text.charAt(0).toUpperCase() + text.slice(1).toLowerCase() : "";
+      }
+      const fieldMeta = (key) => FIELDS[key] || { label: humanize(key) };
+
+      // ---------- Küçük DOM yardımcıları ----------
+
+      function h(tag, props, ...kids) {
+        const el = document.createElement(tag);
+        for (const [key, value] of Object.entries(props || {})) {
+          if (value === null || value === undefined || value === false) continue;
+          if (key === "class") el.className = value;
+          else if (key === "text") el.textContent = value;
+          else if (key.startsWith("on")) el.addEventListener(key.slice(2), value);
+          else if (key in el) el[key] = value;
+          else el.setAttribute(key, value === true ? "" : value);
+        }
+        for (const kid of kids.flat()) {
+          if (kid === null || kid === undefined || kid === false) continue;
+          el.append(kid.nodeType ? kid : String(kid));
+        }
+        return el;
       }
 
+      // Sabit (kullanıcı verisi içermeyen) SVG ikonları.
+      const ICONS = {
+        refresh: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+        logout: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/>',
+        chevron: '<path d="M6 9l6 6 6-6"/>',
+        right: '<path d="M9 6l6 6-6 6"/>',
+        close: '<path d="M6 6l12 12M18 6L6 18"/>',
+        plus: '<path d="M12 5v14M5 12h14"/>',
+        play: '<path d="M7 5l12 7-12 7z"/>',
+        stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+        monitor: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+        alert: '<path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/>',
+      };
+      function icon(name) {
+        const span = document.createElement("span");
+        span.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+        return span.firstChild;
+      }
+
+      function toast(text, kind) {
+        const el = h("div", { class: `toast ${kind || ""}`, text });
+        $("toasts").append(el);
+        setTimeout(() => el.remove(), kind === "error" ? 6000 : 3500);
+      }
+
+      function makeSwitch(checked, label, onChange) {
+        const el = h("button", { class: "switch", type: "button", role: "switch", "aria-checked": String(!!checked), "aria-label": label });
+        el.addEventListener("click", () => {
+          const next = el.getAttribute("aria-checked") !== "true";
+          el.setAttribute("aria-checked", String(next));
+          onChange?.(next);
+        });
+        return el;
+      }
+
+      // ---------- Alt sayfa (sheet) ----------
+
+      let closeSheet = () => {};
+      function openSheet({ title, subtitle, body, footer }) {
+        closeSheet();
+        const backdrop = h(
+          "div",
+          { class: "backdrop" },
+          h(
+            "div",
+            { class: "sheet", role: "dialog", "aria-modal": "true", "aria-label": title },
+            h(
+              "div",
+              { class: "sheet-head" },
+              h("div", { class: "titles" }, h("h3", { text: title }), subtitle && h("div", { class: "sub", text: subtitle })),
+              h("button", { class: "icon-btn", "aria-label": "Kapat", onclick: () => closeSheet() }, icon("close")),
+            ),
+            h("div", { class: "sheet-body" }, body),
+            footer && h("div", { class: "sheet-foot" }, footer),
+          ),
+        );
+        backdrop.addEventListener("click", (event) => {
+          if (event.target === backdrop) closeSheet();
+        });
+        closeSheet = () => {
+          backdrop.remove();
+          document.body.classList.remove("locked");
+          closeSheet = () => {};
+        };
+        document.body.classList.add("locked");
+        document.body.append(backdrop);
+      }
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeSheet();
+      });
+
+      function openConfirm({ title, text, confirmLabel, danger, onConfirm }) {
+        openSheet({
+          title,
+          body: h("div", { text, style: "font-size:15px;color:var(--muted)" }),
+          footer: [
+            h("button", { class: "btn ghost grow", text: "Vazgeç", onclick: () => closeSheet() }),
+            h("button", {
+              class: `btn grow ${danger ? "danger" : ""}`,
+              text: confirmLabel,
+              onclick: () => {
+                closeSheet();
+                onConfirm();
+              },
+            }),
+          ],
+        });
+      }
+
+      // ---------- Oturum ----------
+
       const AUTH_ERROR_MESSAGES = {
-        invalid_credentials: "E-posta veya sifre hatali.",
-        email_not_confirmed: "E-posta adresiniz dogrulanmamis. Gelen kutunuzdaki baglantiya tiklayin.",
-        user_banned: "Bu hesap devre disi birakilmis.",
-        over_request_rate_limit: "Cok fazla deneme yapildi. Lutfen biraz sonra tekrar deneyin.",
-        validation_failed: "E-posta adresi gecersiz.",
+        invalid_credentials: "E-posta veya şifre hatalı.",
+        email_not_confirmed: "E-posta adresin doğrulanmamış. Gelen kutundaki bağlantıya tıkla.",
+        user_banned: "Bu hesap devre dışı bırakılmış.",
+        over_request_rate_limit: "Çok fazla deneme yapıldı. Biraz sonra tekrar dene.",
+        validation_failed: "E-posta adresi geçersiz.",
       };
 
       function authErrorMessage(data) {
         const code = String(data?.error_code || data?.error || "");
         if (code === "invalid_grant") return AUTH_ERROR_MESSAGES.invalid_credentials;
-        return AUTH_ERROR_MESSAGES[code] || `Giris basarisiz (${data?.msg || data?.error_description || code || "?"}).`;
+        return AUTH_ERROR_MESSAGES[code] || "Giriş yapılamadı. Bilgilerini kontrol edip tekrar dene.";
       }
 
       async function authFetch(path, body) {
@@ -197,12 +671,9 @@
             body: JSON.stringify(body),
           });
           data = await res.json().catch(() => ({}));
-        } catch (e) {
-          // file:// origininden veya internet yokken sunucuya ulasilamaz.
-          throw new Error(
-            "Sunucuya ulasilamadi. Sayfayi dosya olarak (file://) degil QR baglantisindaki " +
-              "https adresinden acin ve internet baglantinizi kontrol edin.",
-          );
+        } catch {
+          // file:// origininden veya internet yokken sunucuya ulaşılamaz.
+          throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et ve sayfayı QR'daki adresten aç.");
         }
         return { res, data };
       }
@@ -212,40 +683,52 @@
         state.refreshToken = data.refresh_token || state.refreshToken;
         state.expiresAt = Date.now() + Number(data.expires_in || 3600) * 1000;
         state.email = data.user?.email || fallbackEmail || state.email;
-        localStorage.setItem("travianbotRemote.accessToken", state.accessToken);
-        localStorage.setItem("travianbotRemote.refreshToken", state.refreshToken);
-        localStorage.setItem("travianbotRemote.expiresAt", String(state.expiresAt));
-        localStorage.setItem("travianbotRemote.email", state.email);
+        store.set("accessToken", state.accessToken);
+        store.set("refreshToken", state.refreshToken);
+        store.set("expiresAt", String(state.expiresAt));
+        store.set("email", state.email);
+      }
+
+      function showLoginError(text) {
+        $("loginError").textContent = text || "";
+        $("loginError").hidden = !text;
       }
 
       async function signIn() {
         const email = $("emailInput").value.trim();
         const password = $("passwordInput").value;
-        if (!email || !password) {
-          setMessage("E-posta ve sifre girin.");
-          return;
+        if (!email || !password) return showLoginError("E-posta ve şifreni gir.");
+        showLoginError("");
+        const button = $("loginButton");
+        button.disabled = true;
+        button.textContent = "Giriş yapılıyor…";
+        try {
+          const { res, data } = await authFetch("token?grant_type=password", { email, password });
+          if (!res.ok) throw new Error(authErrorMessage(data));
+          storeSession(data, email);
+          $("passwordInput").value = "";
+          render();
+          await refreshDevices({ manual: true });
+        } catch (error) {
+          showLoginError(error.message);
+        } finally {
+          button.disabled = false;
+          button.textContent = "Giriş yap";
         }
-        setMessage("Giris yapiliyor...");
-        const { res, data } = await authFetch("token?grant_type=password", { email, password });
-        if (!res.ok) throw new Error(authErrorMessage(data));
-        storeSession(data, email);
-        setSessionUi();
-        if (state.pairToken) await pairPhone();
-        await refreshDevices();
       }
 
-      // Supabase refresh token'lari tek kullanimliktir; eszamanli yenilemeleri tekillestir.
+      // Supabase refresh token'ları tek kullanımlıktır; eşzamanlı yenilemeleri tekilleştir.
       let refreshPromise = null;
       async function getAccessToken() {
         if (state.accessToken && state.expiresAt - Date.now() > 60_000) return state.accessToken;
-        if (!state.refreshToken) throw new Error("Oturum yok. Tekrar giris yapin.");
+        if (!state.refreshToken) throw new Error(ERROR_TEXT.unauthenticated);
         refreshPromise =
           refreshPromise ||
           authFetch("token?grant_type=refresh_token", { refresh_token: state.refreshToken })
             .then(({ res, data }) => {
               if (!res.ok) {
                 signOut();
-                throw new Error("Oturum suresi doldu. Tekrar giris yapin.");
+                throw new Error(ERROR_TEXT.unauthenticated);
               }
               storeSession(data);
               return state.accessToken;
@@ -262,397 +745,726 @@
         state.expiresAt = 0;
         state.email = "";
         state.devices = [];
-        for (const key of ["accessToken", "refreshToken", "expiresAt", "email"]) {
-          localStorage.removeItem(`travianbotRemote.${key}`);
-        }
-        setSessionUi();
-        renderDevices();
-        setMessage("");
+        state.loaded = false;
+        for (const key of ["accessToken", "refreshToken", "expiresAt", "email"]) store.remove(key);
+        pending.tasks.clear();
+        pending.accounts.clear();
+        pending.added.clear();
+        closeSheet();
+        render();
       }
+
+      // ---------- Sunucu çağrıları ----------
 
       // remotePairPhoneDevice -> POST /rest/v1/rpc/remote_pair_phone_device { p: {...} }
       async function callRemote(name, payload = {}) {
         const rpcName = name.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
         const token = await getAccessToken();
-        const res = await fetch(`${RPC_BASE}/${rpcName}`, {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            apikey: SUPABASE_PUBLISHABLE_KEY,
-            authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ p: payload }),
-        });
+        let res;
+        try {
+          res = await fetch(`${RPC_BASE}/${rpcName}`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ p: payload }),
+          });
+        } catch {
+          throw new Error("Sunucuya ulaşılamadı. İnternet bağlantını kontrol et.");
+        }
         const data = await res.json().catch(() => ({}));
         if (res.status === 401) {
           signOut();
-          throw new Error("Oturum suresi doldu. Tekrar giris yapin.");
+          throw new Error(ERROR_TEXT.unauthenticated);
         }
-        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || `${name}_failed`);
+        if (!res.ok || data.ok === false) {
+          const code = String(data.error || data.message || "");
+          const error = new Error(ERROR_TEXT[code] || "İşlem tamamlanamadı. Biraz sonra tekrar dene.");
+          error.code = code;
+          throw error;
+        }
         return data;
       }
 
       async function pairPhone() {
-        setMessage("Telefon eslestiriliyor...");
-        const data = await callRemote("remotePairPhoneDevice", {
-          pairToken: state.pairToken,
-          phoneDeviceId: state.phoneDeviceId,
-          phoneLabel: navigator.userAgent.slice(0, 80),
-        });
-        localStorage.setItem("travianbotRemote.lastPairedMachineId", data.machineId || "");
+        const token = state.pairToken;
         state.pairToken = "";
         const cleanUrl = new URL(location.href);
         cleanUrl.searchParams.delete("pairToken");
         history.replaceState(null, "", cleanUrl.toString());
-        setMessage("Telefon eslestirildi.");
+        try {
+          const data = await callRemote("remotePairPhoneDevice", {
+            pairToken: token,
+            phoneDeviceId: state.phoneDeviceId,
+            phoneLabel: navigator.userAgent.slice(0, 80),
+          });
+          store.set("lastPairedMachineId", data.machineId || "");
+          toast("Telefon eşleştirildi.", "ok");
+        } catch (error) {
+          if (!state.refreshToken) throw error;
+          toast("Eşleştirme yapılamadı. QR kodunun süresi dolmuş olabilir; bilgisayardan yenisini oluştur.", "error");
+        }
       }
 
-      async function refreshDevices() {
-        setMessage("Cihazlar aliniyor...");
-        if (state.pairToken) await pairPhone();
-        const data = await callRemote("remoteListDevices", {
-          phoneDeviceId: state.phoneDeviceId,
-        });
-        state.devices = data.devices || [];
-        renderDevices();
-        setMessage(state.devices.length ? "" : "Eslesmis remote cihaz bulunamadi. Masaustu uygulamasindan QR olusturup okutun.");
+      async function refreshDevices({ manual = false } = {}) {
+        if (state.loading || !state.refreshToken) return;
+        state.loading = true;
+        $("refreshButton").classList.add("spin");
+        try {
+          if (state.pairToken) await pairPhone();
+          const data = await callRemote("remoteListDevices", { phoneDeviceId: state.phoneDeviceId });
+          state.devices = data.devices || [];
+          state.loaded = true;
+          $("connectionNotice").hidden = true;
+        } catch (error) {
+          if (state.refreshToken) {
+            if (manual || !state.loaded) toast(error.message, "error");
+            $("connectionNotice").replaceChildren(icon("alert"), h("span", { text: `${error.message} Gösterilen bilgiler eski olabilir.` }));
+            $("connectionNotice").hidden = false;
+            state.loaded = true;
+          }
+        } finally {
+          state.loading = false;
+          $("refreshButton").classList.remove("spin");
+          render();
+        }
       }
 
-      async function sendCommand(machineId, type, payload = {}) {
-        await callRemote("remoteCreateCommand", {
-          machineId,
-          phoneDeviceId: state.phoneDeviceId,
-          type,
-          payload,
-        });
-        setMessage("Komut gonderildi. Sonuc bir sonraki yenilemede gorunur.");
+      // Komutu gönderir; `optimistic` bekleyen değişikliği hemen ekrana yansıtır,
+      // gönderim başarısız olursa `undo` ile geri alınır.
+      async function sendCommand(device, type, payload, { optimistic, undo, done } = {}) {
+        optimistic?.();
+        render();
+        try {
+          await callRemote("remoteCreateCommand", {
+            machineId: device.machineId,
+            phoneDeviceId: state.phoneDeviceId,
+            type,
+            payload: payload || {},
+          });
+          toast(
+            isOnline(device)
+              ? done || "Gönderildi. Bilgisayar birkaç saniye içinde uygular."
+              : "Gönderildi. Bilgisayar 5 dakika içinde çevrimiçi olursa uygulanır.",
+            "ok",
+          );
+          return true;
+        } catch (error) {
+          undo?.();
+          render();
+          toast(error.message, "error");
+          return false;
+        }
       }
 
-      async function addTask(machineId, accountId, type) {
-        if (!type) return;
-        const task = {
-          id: crypto.randomUUID(),
-          accountId,
-          type,
-          isEnabled: false,
-          villageOrder: [],
-          config: {},
-          createdAt: Date.now(),
+      // ---------- Bekleyen değişiklikler ----------
+
+      function markTask(taskId, patch) {
+        const previous = pending.tasks.get(taskId);
+        pending.tasks.set(taskId, { ...(previous || {}), ...patch, until: Date.now() + PENDING_MS });
+        return () => (previous ? pending.tasks.set(taskId, previous) : pending.tasks.delete(taskId));
+      }
+
+      function viewTask(task) {
+        const p = pending.tasks.get(task.id);
+        if (!p) return task;
+        const onlyToggle = p.enabled !== undefined && !p.removed && !p.config && !p.villageOrder;
+        if (p.until < Date.now() || (onlyToggle && p.enabled === task.isEnabled)) {
+          pending.tasks.delete(task.id);
+          return task;
+        }
+        return {
+          ...task,
+          isEnabled: p.enabled ?? task.isEnabled,
+          villageOrder: p.villageOrder ?? task.villageOrder,
+          config: p.config ? { ...(task.config || {}), ...p.config } : task.config,
+          removed: !!p.removed,
+          syncing: true,
         };
-        await sendCommand(machineId, "upsertTask", { task });
-        setMessage(
-          "Gorev pasif olarak eklendi. Etkinlestirmek icin Baslat'a basin; " +
-            "detayli ayar icin masaustu uygulamasini kullanin.",
+      }
+
+      function viewTasks(account) {
+        const server = account.tasks || [];
+        const tasks = server.map(viewTask).filter((task) => !task.removed);
+        const added = (pending.added.get(account.id) || []).filter(
+          (entry) => entry.until > Date.now() && !server.some((task) => task.id === entry.task.id),
         );
+        pending.added.set(account.id, added);
+        return tasks.concat(added.map((entry) => ({ ...viewTask(entry.task), syncing: true })).filter((task) => !task.removed));
       }
 
-      function statusText(lastSeenAt) {
-        const diff = Date.now() - Number(lastSeenAt || 0);
-        if (!lastSeenAt || diff > 60_000) return "offline";
-        return "online";
+      function viewStatus(account) {
+        const status = STATUS[account.status] ? account.status : "idle";
+        const p = pending.accounts.get(account.id);
+        if (!p) return status;
+        const reached = p.status === "starting" ? ACTIVE_STATUSES.has(status) : status === "idle";
+        if (reached || p.until < Date.now()) {
+          pending.accounts.delete(account.id);
+          return status;
+        }
+        return p.status;
       }
 
-      function makeEl(tag, className, text) {
-        const element = document.createElement(tag);
-        if (className) element.className = className;
-        if (text !== undefined) element.textContent = text;
-        return element;
+      function markAccount(accountId, status) {
+        pending.accounts.set(accountId, { status, until: Date.now() + PENDING_MS });
+        return () => pending.accounts.delete(accountId);
       }
 
-      function makeButton(text, className) {
-        const button = document.createElement("button");
-        if (className) button.className = className;
-        button.textContent = text;
-        return button;
+      // ---------- Metin yardımcıları ----------
+
+      const isOnline = (device) => Date.now() - Number(device.lastSeenAt || 0) < ONLINE_MS;
+
+      function timeAgo(timestamp) {
+        const seconds = Math.max(0, Math.round((Date.now() - Number(timestamp || 0)) / 1000));
+        if (!timestamp) return "hiç bağlanmadı";
+        if (seconds < 20) return "az önce";
+        if (seconds < 90) return `${seconds} sn önce`;
+        if (seconds < 3600) return `${Math.round(seconds / 60)} dk önce`;
+        if (seconds < 86400) return `${Math.round(seconds / 3600)} saat önce`;
+        return `${Math.round(seconds / 86400)} gün önce`;
       }
 
-      function escapeHtml(value) {
-        return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        })[char]);
+      function durationText(seconds) {
+        const value = Number(seconds) || 0;
+        if (value >= 3600 && value % 3600 === 0) return `${value / 3600} saat`;
+        if (value >= 60) return `${Math.round(value / 60)} dk`;
+        return `${value} sn`;
       }
 
-      function configSummary(task) {
+      function serverName(url) {
+        try {
+          return new URL(url).host;
+        } catch {
+          return String(url || "");
+        }
+      }
+
+      function villageName(account, id) {
+        const village = (account.villages || []).find((v) => String(v.villageId) === String(id));
+        return village ? village.name : "";
+      }
+
+      function complexSummary(key, value) {
+        if (Array.isArray(value)) {
+          if (value.every((item) => typeof item === "string")) return value.length ? value.join(", ") : "Hepsi";
+          return `${value.length} kalem`;
+        }
+        const entries = Object.entries(value || {});
+        if (key === "targetTile" && "x" in value && "y" in value) return `(${value.x}|${value.y})`;
+        if (entries.length && entries.every(([k]) => /^t\d+$/.test(k))) {
+          const total = entries.reduce((sum, [, n]) => sum + (Number(n) || 0), 0);
+          return total ? `${total} asker` : "Seçilmedi";
+        }
+        return entries.length ? `${entries.length} kayıt` : "Boş";
+      }
+
+      // Görev satırında gösterilen kısa, okunabilir özet.
+      function taskChips(account, task) {
         const config = task.config || {};
-        const parts = [];
-        const villageOrder = task.villageOrder || [];
-        if (villageOrder.length) parts.push(`koy: ${villageOrder.length}`);
-        for (const [key, value] of Object.entries(config)) {
-          if (value === null) continue;
-          const type = typeof value;
-          if (type === "string" || type === "number" || type === "boolean") parts.push(`${key}: ${value}`);
-          else if (Array.isArray(value)) parts.push(`${key}: [${value.length}]`);
-          else if (type === "object") parts.push(`${key}: {…}`);
-        }
-        return parts.length ? parts.join(" · ") : "varsayilan ayarlar";
+        const chips = [];
+        const villageCount = (task.villageOrder || []).length;
+        if (villageCount) chips.push(villageCount === 1 ? villageName(account, task.villageOrder[0]) || "1 köy" : `${villageCount} köy`);
+        else if (config.sourceVillageId) chips.push(villageName(account, config.sourceVillageId) || "1 köy");
+        if (Array.isArray(config.buildingQueue)) chips.push(`${config.buildingQueue.length} bina sırada`);
+        if (Array.isArray(config.queue)) chips.push(`${config.queue.length} eğitim sırada`);
+        if (typeof config.targetX === "number" && typeof config.targetY === "number") chips.push(`Hedef (${config.targetX}|${config.targetY})`);
+        if (typeof config.maxLevel === "number") chips.push(`Azami seviye ${config.maxLevel}`);
+        if (config.attackMode && config.attackMode !== "off") chips.push(FIELDS.attackMode.options[config.attackMode] || "Saldırı açık");
+        if (typeof config.intervalSeconds === "number") chips.push(`Her ${durationText(config.intervalSeconds)}`);
+        return chips.slice(0, 3);
       }
 
-      // Bir gorevin ayarlarini telefondan duzenlemek icin form paneli olusturur.
-      // Basit (primitive) config alanlari ayri input olarak; tum config ise
-      // "Gelismis JSON" alaninda gosterilir. Kaydet, yalnizca degisen alanlari
-      // updateTaskConfig ile gonderir (merge); secret alanlar panele hic gelmez.
-      function buildTaskEditor(machineId, account, task) {
-        const editor = makeEl("div", "card");
-        editor.style.cssText = "margin-top:8px;display:none";
+      // ---------- Görev düzenleme ----------
 
-        const config = task.config || {};
-        const villages = account.villages || [];
-        const villageBoxes = [];
+      function buildField(key, value, account) {
+        const meta = fieldMeta(key);
+        const type = typeof value;
 
-        if (villages.length) {
-          const villageWrap = makeEl("div");
-          villageWrap.style.marginBottom = "10px";
-          villageWrap.appendChild(makeEl("div", "muted", "Koyler"));
-          const order = (task.villageOrder || []).map(String);
-          for (const village of villages) {
-            const id = String(village.villageId);
-            const label = makeEl("label");
-            label.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 0";
-            const checkbox = document.createElement("input");
-            checkbox.type = "checkbox";
-            checkbox.style.width = "auto";
-            checkbox.checked = order.includes(id);
-            checkbox.dataset.villageId = id;
-            label.appendChild(checkbox);
-            label.appendChild(makeEl("span", null, `${village.name} (${village.x}|${village.y})`));
-            villageWrap.appendChild(label);
-            villageBoxes.push(checkbox);
-          }
-          editor.appendChild(villageWrap);
+        if (type === "boolean") {
+          let current = value;
+          const row = h("div", { class: "switch-row" }, h("span", { text: meta.label }), makeSwitch(value, meta.label, (next) => (current = next)));
+          return { el: row, toggle: true, read: () => current };
         }
 
-        const fieldInputs = [];
-        const fieldsWrap = makeEl("div");
-        for (const [key, value] of Object.entries(config)) {
-          const type = value === null ? "string" : typeof value;
-          if (type !== "string" && type !== "number" && type !== "boolean") continue;
-          const field = makeEl("label");
-          field.style.cssText = "display:block;margin-bottom:8px";
-          field.appendChild(makeEl("div", "muted", key));
-          const input = document.createElement("input");
-          if (type === "boolean") {
-            input.type = "checkbox";
-            input.style.width = "auto";
-            input.checked = !!value;
-          } else {
-            input.type = type === "number" ? "number" : "text";
-            input.value = value === null ? "" : String(value);
-          }
-          input.dataset.key = key;
-          input.dataset.vtype = type;
-          field.appendChild(input);
-          fieldsWrap.appendChild(field);
-          fieldInputs.push(input);
+        if (meta.multi && Array.isArray(value)) {
+          const selected = new Set(value);
+          const picks = Object.entries(meta.multi).map(([option, label]) => {
+            const button = h("button", { class: "pick", type: "button", "aria-pressed": String(selected.has(option)), text: label });
+            button.addEventListener("click", () => {
+              selected.has(option) ? selected.delete(option) : selected.add(option);
+              button.setAttribute("aria-pressed", String(selected.has(option)));
+            });
+            return button;
+          });
+          return {
+            el: h("div", { class: "field" }, h("span", { text: meta.label }), h("div", { class: "picks" }, picks)),
+            read: () => Object.keys(meta.multi).filter((option) => selected.has(option)),
+          };
         }
-        if (!fieldInputs.length) {
-          fieldsWrap.appendChild(makeEl("div", "muted", "Basit alan yok — Gelismis JSON kullanin."));
+
+        if (type !== "string" && type !== "number") return null;
+
+        const options =
+          meta.kind === "village"
+            ? Object.fromEntries((account.villages || []).map((v) => [String(v.villageId), `${v.name} (${v.x}|${v.y})`]))
+            : meta.options;
+        if (options && Object.keys(options).length) {
+          const select = h("select", { class: "input" });
+          const all = { ...options };
+          if (!(String(value) in all)) all[String(value)] = String(value) || "Seçilmedi";
+          for (const [option, label] of Object.entries(all)) select.append(h("option", { value: option, text: label }));
+          select.value = String(value);
+          return {
+            el: h("label", { class: "field" }, h("span", { text: meta.label }), select),
+            read: () => (type === "number" ? Number(select.value) : select.value),
+          };
         }
-        editor.appendChild(fieldsWrap);
 
-        const advanced = document.createElement("details");
-        const summary = document.createElement("summary");
-        summary.textContent = "Gelismis (tum config JSON)";
-        summary.className = "muted";
-        advanced.appendChild(summary);
-        const useAdvancedLabel = makeEl("label");
-        useAdvancedLabel.style.cssText = "display:flex;align-items:center;gap:8px;margin:8px 0";
-        const useAdvanced = document.createElement("input");
-        useAdvanced.type = "checkbox";
-        useAdvanced.style.width = "auto";
-        useAdvancedLabel.appendChild(useAdvanced);
-        useAdvancedLabel.appendChild(makeEl("span", null, "Basit alanlar yerine bu JSON'u kaydet"));
-        advanced.appendChild(useAdvancedLabel);
-        const textarea = document.createElement("textarea");
-        textarea.rows = 8;
-        textarea.style.cssText = "width:100%;font-family:monospace;font-size:12px";
-        textarea.value = JSON.stringify(config, null, 2);
-        advanced.appendChild(textarea);
-        editor.appendChild(advanced);
+        if (meta.kind === "duration" && type === "number") {
+          const inHours = value >= 3600 && value % 3600 === 0;
+          const input = h("input", { class: "input", type: "number", inputMode: "decimal", min: "0", step: "any", value: String(inHours ? value / 3600 : +(value / 60).toFixed(2)) });
+          const unit = h("select", { class: "input" }, h("option", { value: "60", text: "dakika" }), h("option", { value: "3600", text: "saat" }));
+          unit.value = inHours ? "3600" : "60";
+          return {
+            el: h("label", { class: "field" }, h("span", { text: meta.label }), h("div", { class: "input-group" }, input, unit)),
+            read: () => {
+              const amount = Number(input.value);
+              return input.value !== "" && Number.isFinite(amount) ? Math.round(amount * Number(unit.value)) : value;
+            },
+          };
+        }
 
-        const actions = makeEl("div", "actions");
-        const saveButton = makeButton("Kaydet");
-        saveButton.style.cssText = "width:auto;padding:0 16px";
-        const cancelButton = makeButton("Kapat", "secondary");
-        cancelButton.style.cssText = "width:auto;padding:0 16px";
-        cancelButton.onclick = () => {
-          editor.style.display = "none";
+        const input = h("input", {
+          class: "input",
+          type: type === "number" ? "number" : "text",
+          inputMode: type === "number" ? "decimal" : null,
+          step: type === "number" ? "any" : null,
+          placeholder: meta.placeholder,
+          value: String(value),
+        });
+        return {
+          el: h(
+            "label",
+            { class: "field" },
+            h("span", { text: meta.label }),
+            h("div", { class: "input-group" }, input, meta.unit && h("span", { class: "suffix", text: meta.unit })),
+          ),
+          read: () => {
+            if (type !== "number") return input.value;
+            const amount = Number(input.value);
+            return input.value !== "" && Number.isFinite(amount) ? amount : value;
+          },
         };
-        actions.appendChild(saveButton);
-        actions.appendChild(cancelButton);
-        editor.appendChild(actions);
+      }
 
-        saveButton.onclick = () => {
-          let configPatch;
-          if (useAdvanced.checked) {
+      function openTaskEditor(device, account, task) {
+        const config = task.config || {};
+        const body = [];
+
+        // Köyler
+        const villages = account.villages || [];
+        const order = (task.villageOrder || []).map(String);
+        const selectedVillages = new Set(order);
+        if (villages.length) {
+          const picks = villages.map((village) => {
+            const id = String(village.villageId);
+            const button = h(
+              "button",
+              { class: "pick", type: "button", "aria-pressed": String(selectedVillages.has(id)) },
+              village.name,
+              h("small", { text: `(${village.x}|${village.y})` }),
+            );
+            button.addEventListener("click", () => {
+              selectedVillages.has(id) ? selectedVillages.delete(id) : selectedVillages.add(id);
+              button.setAttribute("aria-pressed", String(selectedVillages.has(id)));
+            });
+            return button;
+          });
+          body.push(
+            h(
+              "div",
+              null,
+              h("div", { class: "group-title", text: "Köyler" }),
+              h("div", { class: "picks" }, picks),
+              h("div", { class: "hint", text: "Görev yalnızca seçili köylerde çalışır." }),
+            ),
+          );
+        }
+
+        // Ayarlar
+        const fields = [];
+        const inputs = [];
+        const toggles = [];
+        const readOnly = [];
+        for (const [key, value] of Object.entries(config)) {
+          if (HIDDEN_FIELDS.has(key) || value === null) continue;
+          const field = buildField(key, value, account);
+          if (field) {
+            fields.push({ key, initial: value, read: field.read });
+            (field.toggle ? toggles : inputs).push(field.el);
+          } else if (typeof value === "object") {
+            readOnly.push(h("div", { class: "ro-row" }, h("span", { text: fieldMeta(key).label }), h("span", { text: complexSummary(key, value) })));
+          }
+        }
+        if (inputs.length) body.push(h("div", null, h("div", { class: "group-title", text: "Ayarlar" }), inputs));
+        if (toggles.length) body.push(h("div", null, h("div", { class: "group-title", text: "Seçenekler" }), toggles));
+        if (readOnly.length) {
+          body.push(
+            h(
+              "div",
+              null,
+              h("div", { class: "group-title", text: "Bilgisayardan düzenlenir" }),
+              readOnly,
+              h("div", { class: "hint", text: "Bu bölümler ayrıntılı olduğu için bilgisayardaki uygulamadan değiştirilir." }),
+            ),
+          );
+        }
+        if (!fields.length && !readOnly.length) {
+          body.push(h("div", { class: "hint", text: "Bu görev varsayılan ayarlarla çalışıyor. Ayrıntılı ayar için bilgisayardaki uygulamayı kullan." }));
+        }
+
+        // Uzman modu: ham ayarlar. Yalnızca metin değiştirilirse kullanılır.
+        const initialJson = JSON.stringify(config, null, 2);
+        const textarea = h("textarea", { class: "input", spellcheck: false, autocapitalize: "none", value: initialJson });
+        body.push(
+          h(
+            "details",
+            null,
+            h("summary", { text: "Uzman modu" }),
+            h("div", { class: "hint", style: "margin-bottom:8px", text: "Ayarların ham hali. Emin değilsen dokunma; burada değişiklik yaparsan yukarıdaki alanlar yerine bu metin kaydedilir." }),
+            textarea,
+          ),
+        );
+
+        const save = () => {
+          let configPatch = {};
+          if (textarea.value !== initialJson) {
             try {
               const parsed = JSON.parse(textarea.value || "{}");
               if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("not_object");
               configPatch = parsed;
             } catch {
-              return setMessage("Gecersiz JSON. Lutfen duzeltin.");
+              return toast("Uzman modundaki metin geçerli değil. Düzelt ya da eski haline getir.", "error");
             }
           } else {
-            configPatch = {};
-            for (const input of fieldInputs) {
-              const key = input.dataset.key;
-              const vtype = input.dataset.vtype;
-              if (vtype === "boolean") configPatch[key] = input.checked;
-              else if (vtype === "number") {
-                const num = Number(input.value);
-                if (Number.isFinite(num)) configPatch[key] = num;
-              } else configPatch[key] = input.value;
+            for (const field of fields) {
+              const next = field.read();
+              if (JSON.stringify(next) !== JSON.stringify(field.initial)) configPatch[field.key] = next;
             }
           }
           const payload = { taskId: task.id, configPatch };
-          if (villageBoxes.length) {
-            payload.villageOrder = villageBoxes.filter((box) => box.checked).map((box) => box.dataset.villageId);
+          const mark = { config: configPatch };
+          if (villages.length) {
+            // Mevcut sıra korunur; yeni seçilenler sona eklenir.
+            const nextOrder = order.filter((id) => selectedVillages.has(id)).concat(villages.map((v) => String(v.villageId)).filter((id) => selectedVillages.has(id) && !order.includes(id)));
+            if (JSON.stringify(nextOrder) !== JSON.stringify(order)) {
+              payload.villageOrder = nextOrder;
+              mark.villageOrder = nextOrder;
+            }
           }
-          sendCommand(machineId, "updateTaskConfig", payload)
-            .then(() => {
-              editor.style.display = "none";
-            })
-            .catch((e) => setMessage(e.message));
+          if (!Object.keys(configPatch).length && !payload.villageOrder) {
+            closeSheet();
+            return toast("Değişiklik yapılmadı.");
+          }
+          closeSheet();
+          let undo;
+          sendCommand(device, "updateTaskConfig", payload, {
+            optimistic: () => (undo = markTask(task.id, mark)),
+            undo: () => undo?.(),
+            done: "Ayarlar kaydedildi. Bilgisayar birkaç saniye içinde uygular.",
+          });
         };
 
-        return editor;
+        const remove = () =>
+          openConfirm({
+            title: "Görev silinsin mi?",
+            text: `"${taskLabel(task.type)}" görevi ve ayarları bu hesaptan kalıcı olarak silinir.`,
+            confirmLabel: "Sil",
+            danger: true,
+            onConfirm: () => {
+              let undo;
+              sendCommand(device, "removeTask", { taskId: task.id }, {
+                optimistic: () => (undo = markTask(task.id, { removed: true })),
+                undo: () => undo?.(),
+                done: "Görev silindi.",
+              });
+            },
+          });
+
+        openSheet({
+          title: taskLabel(task.type),
+          subtitle: account.avatarName || account.username || "",
+          body,
+          footer: [
+            h("button", { class: "btn danger-ghost", text: "Sil", onclick: remove }),
+            h("button", { class: "btn grow", text: "Kaydet", onclick: save }),
+          ],
+        });
       }
 
-      function renderDevices() {
+      function openAddTask(device, account) {
+        const body = ADDABLE_TASKS.map(([type, description]) =>
+          h(
+            "button",
+            {
+              class: "option",
+              type: "button",
+              onclick: () => {
+                closeSheet();
+                const task = {
+                  id: crypto.randomUUID(),
+                  accountId: account.id,
+                  type,
+                  isEnabled: false,
+                  villageOrder: [],
+                  config: {},
+                  createdAt: Date.now(),
+                };
+                sendCommand(device, "upsertTask", { task }, {
+                  optimistic: () => {
+                    const list = pending.added.get(account.id) || [];
+                    pending.added.set(account.id, list.concat({ task, until: Date.now() + PENDING_MS }));
+                  },
+                  undo: () => pending.added.set(account.id, (pending.added.get(account.id) || []).filter((entry) => entry.task.id !== task.id)),
+                  done: "Görev kapalı olarak eklendi. Hazır olduğunda anahtarını aç.",
+                });
+              },
+            },
+            h("div", { class: "info" }, h("strong", { text: taskLabel(type) }), h("small", { text: description })),
+            icon("plus"),
+          ),
+        );
+        body.push(h("div", { class: "hint", text: "Sıralı Saldırı, Asker Eğitimi, Bina İnşa ve araç bağlantıları ayrıntılı ayar gerektirdiği için bilgisayardaki uygulamadan eklenir." }));
+        openSheet({ title: "Görev ekle", subtitle: account.avatarName || account.username || "", body: h("div", { class: "stack" }, body) });
+      }
+
+      // ---------- Ekran ----------
+
+      function isExpanded(accountId, total) {
+        return accountId in state.expanded ? !!state.expanded[accountId] : total <= 2;
+      }
+
+      function renderTask(device, account, task) {
+        const label = taskLabel(task.type);
+        const chips = taskChips(account, task);
+        return h(
+          "div",
+          { class: `task ${task.isEnabled ? "" : "off"}` },
+          h(
+            "button",
+            { class: "task-main", type: "button", "aria-label": `${label} ayarları`, onclick: () => openTaskEditor(device, account, task) },
+            h("div", { class: "task-title" }, label, task.syncing && h("span", { class: "sync", text: "Uygulanıyor…" })),
+            chips.length ? h("div", { class: "chips" }, chips.map((text) => h("span", { class: "chip", text }))) : null,
+          ),
+          makeSwitch(task.isEnabled, `${label} görevini aç/kapat`, (enabled) => {
+            let undo;
+            sendCommand(device, "toggleTask", { taskId: task.id, enabled }, {
+              optimistic: () => (undo = markTask(task.id, { enabled })),
+              undo: () => undo?.(),
+              done: enabled ? "Görev açıldı." : "Görev kapatıldı.",
+            });
+          }),
+        );
+      }
+
+      function renderAccount(device, account, total) {
+        const name = account.avatarName || account.username || "Hesap";
+        const status = viewStatus(account);
+        const [statusLabel, statusTone] = STATUS[status];
+        const tasks = viewTasks(account);
+        const enabledCount = tasks.filter((task) => task.isEnabled).length;
+        const open = isExpanded(account.id, total);
+        const active = ACTIVE_STATUSES.has(status);
+
+        const head = h(
+          "button",
+          {
+            class: "account-head",
+            type: "button",
+            "aria-expanded": String(open),
+            onclick: () => {
+              state.expanded[account.id] = !open;
+              store.set("expanded", JSON.stringify(state.expanded));
+              render();
+            },
+          },
+          h("div", { class: "avatar", text: name.charAt(0).toUpperCase() }),
+          h("div", { class: "info" }, h("div", { class: "name", text: name }), h("div", { class: "server", text: serverName(account.serverUrl) })),
+          h("div", { class: "side" }, h("span", { class: `badge ${statusTone}`, text: statusLabel })),
+          h("span", { class: "chev" }, icon("chevron")),
+        );
+        const card = h("section", { class: `card ${open ? "open" : ""}` }, head);
+        if (!open) return card;
+
+        const facts = [
+          `${enabledCount}/${tasks.length} görev açık`,
+          NETWORK_LABELS[account.networkMode] || "",
+          account.ip && account.ip !== "-" ? `IP ${account.ip}` : "",
+          account.sleepModeEnabled ? "Uyku modu" : "",
+        ].filter(Boolean);
+
+        const power =
+          status === "stopping"
+            ? h("button", { class: "btn small ghost", disabled: true, text: "Durduruluyor…" })
+            : active
+              ? h("button", {
+                  class: "btn small danger-ghost",
+                  onclick: () => {
+                    let undo;
+                    sendCommand(device, "stopAccount", { accountId: account.id }, { optimistic: () => (undo = markAccount(account.id, "stopping")), undo: () => undo?.() });
+                  },
+                }, icon("stop"), "Durdur")
+              : h("button", {
+                  class: "btn small",
+                  onclick: () => {
+                    let undo;
+                    sendCommand(device, "startAccount", { accountId: account.id }, { optimistic: () => (undo = markAccount(account.id, "starting")), undo: () => undo?.() });
+                  },
+                }, icon("play"), "Başlat");
+
+        card.append(
+          h(
+            "div",
+            { class: "account-body" },
+            h("div", { class: "account-bar" }, h("div", { class: "chips" }, facts.map((text) => h("span", { class: "chip", text }))), power),
+            h("div", { class: "section-title" }, "Görevler"),
+            h(
+              "div",
+              { class: "tasks" },
+              tasks.length ? tasks.map((task) => renderTask(device, account, task)) : h("div", { class: "empty", text: "Bu hesapta henüz görev yok." }),
+            ),
+            h("button", { class: "btn ghost block", onclick: () => openAddTask(device, account) }, icon("plus"), "Görev ekle"),
+          ),
+        );
+        return card;
+      }
+
+      function renderDevice(device, index, count) {
+        const online = isOnline(device);
+        const accounts = device.accounts || [];
+        const wrap = h("section", { class: "device stack" });
+        wrap.append(
+          h(
+            "div",
+            { class: "device-head" },
+            h("div", { class: "ico" }, icon("monitor")),
+            h(
+              "div",
+              { class: "info" },
+              h("strong", { text: count > 1 ? `Bilgisayar ${index + 1}` : "Bilgisayarım" }),
+              h("div", { class: "meta", text: online ? `Sürüm ${device.appVersion || "?"} · ${timeAgo(device.lastSeenAt)} güncellendi` : `Son görülme: ${timeAgo(device.lastSeenAt)}` }),
+            ),
+            h("span", { class: `badge ${online ? "ok" : ""}`, text: online ? "Çevrimiçi" : "Çevrimdışı" }),
+          ),
+        );
+        if (!device.remoteControlEnabled) {
+          wrap.append(h("div", { class: "notice" }, icon("alert"), h("span", { text: "Bu bilgisayarda uzaktan kontrol kapalı. Komutların çalışması için uygulamada Ayarlar → Uzaktan kontrol'ü aç." })));
+        } else if (!online) {
+          wrap.append(h("div", { class: "notice" }, icon("alert"), h("span", { text: "Bilgisayara ulaşılamıyor. TravianBot açık ve internete bağlı olmalı; gösterilen bilgiler eski olabilir." })));
+        }
+        if (accounts.length > 1) {
+          wrap.append(
+            h(
+              "div",
+              { class: "device-actions" },
+              h("button", {
+                class: "btn ghost",
+                onclick: () => {
+                  const undos = [];
+                  sendCommand(device, "startAll", {}, {
+                    optimistic: () => accounts.forEach((a) => !ACTIVE_STATUSES.has(viewStatus(a)) && undos.push(markAccount(a.id, "starting"))),
+                    undo: () => undos.forEach((fn) => fn()),
+                  });
+                },
+              }, icon("play"), "Tümünü başlat"),
+              h("button", {
+                class: "btn danger-ghost",
+                onclick: () =>
+                  openConfirm({
+                    title: "Tüm hesaplar durdurulsun mu?",
+                    text: "Bu bilgisayarda çalışan bütün hesaplar durdurulur.",
+                    confirmLabel: "Tümünü durdur",
+                    danger: true,
+                    onConfirm: () => {
+                      const undos = [];
+                      sendCommand(device, "stopAll", {}, {
+                        optimistic: () => accounts.forEach((a) => ACTIVE_STATUSES.has(viewStatus(a)) && undos.push(markAccount(a.id, "stopping"))),
+                        undo: () => undos.forEach((fn) => fn()),
+                      });
+                    },
+                  }),
+              }, icon("stop"), "Tümünü durdur"),
+            ),
+          );
+        }
+        if (!accounts.length) wrap.append(h("div", { class: "card empty", text: "Bu bilgisayarda henüz hesap eklenmemiş." }));
+        for (const account of accounts) wrap.append(renderAccount(device, account, accounts.length));
+        return wrap;
+      }
+
+      function renderWelcome() {
+        return h(
+          "div",
+          { class: "card welcome" },
+          h("h2", { text: "Bilgisayarını eşleştir" }),
+          h("p", { text: "Bu telefona bağlı bir bilgisayar yok." }),
+          h(
+            "ol",
+            { class: "steps" },
+            h("li", null, h("span", { text: "Bilgisayarda TravianBot'u aç ve Ayarlar'a gir." })),
+            h("li", null, h("span", { text: "Uzaktan kontrolü aç, \"QR oluştur\"a bas." })),
+            h("li", null, h("span", { text: "QR kodunu bu telefonun kamerasıyla okut." })),
+          ),
+          h("button", { class: "btn ghost block", text: "Tekrar kontrol et", onclick: () => refreshDevices({ manual: true }) }),
+        );
+      }
+
+      function render() {
+        const signedIn = !!state.refreshToken;
+        $("loginView").hidden = signedIn;
+        $("appView").hidden = !signedIn;
+        $("refreshButton").hidden = !signedIn;
+        $("logoutButton").hidden = !signedIn;
+        $("sessionLabel").textContent = signedIn ? state.email : "Uzaktan kontrol";
+        if (!signedIn) return;
+
         const root = $("deviceList");
-        root.replaceChildren();
-        for (const device of state.devices) {
-          const card = document.createElement("section");
-          card.className = "card";
-          card.innerHTML = `
-            <div class="row">
-              <div>
-                <strong>${escapeHtml(device.machineId || "Cihaz")}</strong>
-                <div class="muted mono">v${escapeHtml(device.appVersion || "-")} · ${escapeHtml(statusText(device.lastSeenAt))}</div>
-              </div>
-              <span class="pill">${device.remoteControlEnabled ? "acik" : "kapali"}</span>
-            </div>
-          `;
-
-          for (const account of device.accounts || []) {
-            const row = document.createElement("div");
-            row.className = "card";
-            row.style.margin = "12px 0 0";
-            row.innerHTML = `
-              <div class="row">
-                <div>
-                  <strong>${escapeHtml(account.avatarName || account.username || "Hesap")}</strong>
-                  <div class="muted">${escapeHtml(account.serverUrl || "")}</div>
-                  <div class="muted mono">${escapeHtml(account.status || "idle")} · ${escapeHtml(account.enabledTaskCount || 0)}/${escapeHtml(account.taskCount || 0)} gorev</div>
-                  <div class="muted mono" style="font-size:11px">${escapeHtml(account.networkMode || "tor")}${account.sleepModeEnabled ? " · uyku modu acik" : ""}</div>
-                </div>
-                <span class="pill">${escapeHtml(account.ip || "-")}</span>
-              </div>
-              <div class="actions">
-                <button data-action="start">Baslat</button>
-                <button class="danger" data-action="stop">Durdur</button>
-              </div>
-            `;
-            row.querySelector('[data-action="start"]').onclick = () =>
-              sendCommand(device.machineId, "startAccount", { accountId: account.id });
-            row.querySelector('[data-action="stop"]').onclick = () =>
-              sendCommand(device.machineId, "stopAccount", { accountId: account.id });
-
-            const tasks = account.tasks || [];
-            const tasksWrap = document.createElement("div");
-            tasksWrap.style.marginTop = "10px";
-            const heading = document.createElement("h2");
-            heading.textContent = "Gorevler";
-            tasksWrap.appendChild(heading);
-
-            for (const task of tasks) {
-              const taskWrap = document.createElement("div");
-              taskWrap.style.marginTop = "8px";
-
-              const taskRow = document.createElement("div");
-              taskRow.className = "row";
-              taskRow.innerHTML = `
-                <div style="min-width:0">
-                  <strong>${escapeHtml(taskLabel(task.type))}</strong>
-                  <div class="muted mono">${task.isEnabled ? "aktif" : "pasif"}</div>
-                  <div class="muted" style="font-size:11px;margin-top:2px;word-break:break-word">${escapeHtml(configSummary(task))}</div>
-                </div>
-                <div style="display:flex;gap:6px;width:auto">
-                  <button data-action="edit" class="secondary" style="width:auto;padding:0 12px">Duzenle</button>
-                  <button data-action="toggle" class="${task.isEnabled ? "danger" : ""}" style="width:auto;padding:0 12px">
-                    ${task.isEnabled ? "Durdur" : "Baslat"}
-                  </button>
-                  <button data-action="remove" class="secondary" style="width:auto;padding:0 12px">Sil</button>
-                </div>
-              `;
-
-              const editor = buildTaskEditor(device.machineId, account, task);
-              taskRow.querySelector('[data-action="edit"]').onclick = () => {
-                editor.style.display = editor.style.display === "none" ? "block" : "none";
-              };
-              taskRow.querySelector('[data-action="toggle"]').onclick = () =>
-                sendCommand(device.machineId, "toggleTask", { taskId: task.id, enabled: !task.isEnabled }).catch((e) =>
-                  setMessage(e.message),
-                );
-              taskRow.querySelector('[data-action="remove"]').onclick = () => {
-                if (!confirm(`"${taskLabel(task.type)}" gorevini silmek istiyor musunuz?`)) return;
-                sendCommand(device.machineId, "removeTask", { taskId: task.id }).catch((e) => setMessage(e.message));
-              };
-
-              taskWrap.appendChild(taskRow);
-              taskWrap.appendChild(editor);
-              tasksWrap.appendChild(taskWrap);
-            }
-
-            if (!tasks.length) {
-              const empty = document.createElement("div");
-              empty.className = "muted";
-              empty.style.marginTop = "8px";
-              empty.textContent = "Henuz gorev yok.";
-              tasksWrap.appendChild(empty);
-            }
-
-            const addRow = document.createElement("div");
-            addRow.style.cssText = "display:flex;gap:8px;margin-top:10px";
-            const addSelect = document.createElement("select");
-            addSelect.style.flex = "1";
-            for (const type of ADDABLE_TASK_TYPES) {
-              const opt = document.createElement("option");
-              opt.value = type;
-              opt.textContent = taskLabel(type);
-              addSelect.appendChild(opt);
-            }
-            const addButton = document.createElement("button");
-            addButton.textContent = "Gorev ekle";
-            addButton.style.cssText = "width:auto;padding:0 16px";
-            addButton.onclick = () =>
-              addTask(device.machineId, account.id, addSelect.value).catch((e) => setMessage(e.message));
-            addRow.appendChild(addSelect);
-            addRow.appendChild(addButton);
-            tasksWrap.appendChild(addRow);
-
-            row.appendChild(tasksWrap);
-
-            card.appendChild(row);
-          }
-          root.appendChild(card);
+        if (!state.loaded) {
+          root.replaceChildren(h("div", { class: "stack" }, h("div", { class: "skeleton" }), h("div", { class: "skeleton" })));
+        } else if (!state.devices.length) {
+          root.replaceChildren(renderWelcome());
+        } else {
+          root.replaceChildren(...state.devices.map((device, index) => renderDevice(device, index, state.devices.length)));
         }
       }
 
-      $("loginButton").onclick = () => signIn().catch((e) => setMessage(e.message));
-      $("logoutButton").onclick = signOut;
-      $("refreshButton").onclick = () => refreshDevices().catch((e) => setMessage(e.message));
-      $("stopAllButton").onclick = async () => {
-        const device = state.devices[0];
-        if (!device) return setMessage("Cihaz yok.");
-        await sendCommand(device.machineId, "stopAll");
-      };
+      // ---------- Başlangıç ----------
 
-      setSessionUi();
-      if (state.refreshToken) refreshDevices().catch((e) => setMessage(e.message));
+      $("refreshButton").append(icon("refresh"));
+      $("logoutButton").append(icon("logout"));
+      $("loginButton").addEventListener("click", signIn);
+      for (const id of ["emailInput", "passwordInput"]) {
+        $(id).addEventListener("keydown", (event) => {
+          if (event.key === "Enter") signIn();
+        });
+      }
+      $("refreshButton").addEventListener("click", () => refreshDevices({ manual: true }));
+      $("logoutButton").addEventListener("click", () =>
+        openConfirm({ title: "Çıkış yapılsın mı?", text: "Bu telefondaki oturum kapatılır. Eşleştirme silinmez.", confirmLabel: "Çıkış yap", onConfirm: signOut }),
+      );
+
+      // Sayfa görünürken durumu kendiliğinden tazele.
+      setInterval(() => {
+        if (document.visibilityState === "visible") refreshDevices();
+      }, REFRESH_MS);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") refreshDevices();
+      });
+
+      render();
+      refreshDevices();
     </script>
   </body>
 </html>
